@@ -1,14 +1,21 @@
-from datetime import datetime, timedelta
 from pathlib import Path
 
 from GServicesHandler import GServicesHandler
+from Ticket import Ticket
+
+from pypdf import PdfReader
+
+from impl import load
 
 
 def main() -> None:
-    gsh = GServicesHandler(Path(__file__).parent / "credentials.json",
-                           Path(__file__).parent / "token.json")
-    gsh.insert_event("Hello World Event", "Merces, Goa",
-                     "Just saying hi guys", datetime.now(), datetime.now() + timedelta(hours=2))
+    # Start with connecting to ensuring a connection to Google API
+    # gsh = GServicesHandler(Path(__file__).parent / "credentials.json",
+    #                        Path(__file__).parent / "token.json")
+
+    # config = ConfigurationHandler()
+    # load(config)
+    Ticket(Path.home() / "travels/JUC NZM 191225.pdf")
 
 
 if __name__ == "__main__":
