@@ -1,14 +1,46 @@
 # If modifying these scopes, delete the file token.json.
+from enum import IntEnum, auto
 from datetime import timedelta
 from pathlib import Path
 
 
+class ReminderNotificationType(IntEnum):
+    popup = auto()
+    email = auto()
+
+
+class CalendarEventColor(IntEnum):
+    Lavendar = 1
+    Sage = 2
+    Grape = 3
+    Flamingo = 4
+    Banana = 5
+    Tangerine = 6
+    Peacock = 7
+    Graphite = 8
+    Blueberry = 9
+    Basil = 10
+    Tomato = 11
+
+
 SCOPES = ["https://www.googleapis.com/auth/calendar.events.owned"]
+
+GOOGLE_CREDENTIALS_FP = Path(__file__).parent / "credentials.json"
+GOOGLE_TOKEN_FP = Path(__file__).parent / "token.json"
+
+REMINDER_NOTIFICATION_TYPE = ReminderNotificationType.popup
+DEFAULT_REMINDERS = [
+    timedelta(minutes=30),
+    timedelta(hours=2),
+    timedelta(weeks=1),
+]
+DEFAULT_EVENT_COLOR = CalendarEventColor.Banana
 
 IRCTC_REGEX = {
     "station_info": r"Booked From\n To\n(?P<departure_station_name>.*?) \((?P<departure_station_code>\w{3,4})\).*?\) (?P<arrival_station_name>.*) \((?P<arrival_station_code>\w{3,4})\)\n",
     "time_info": r"Start Date\* (?P<departure_date>.*?) Departure\* (?P<departure_datetime>.*?) Arrival\* (?P<arrival_datetime>.*?)\n",
-    "train_number": r"PNR Train No./Name Class\n\d+ (?P<train_number>\d\d\d\d\d)"
+    "train_number": r"PNR Train No./Name Class\n\d+ (?P<train_number>\d\d\d\d\d)",
+    "seating": r"CNF/(?P<seating>\w\d{1,2}/\d{1,2}/(?:SIDE )?(?:UPPER|MIDDLE|LOWER))|RLWL"
 }
 
 DATA_MISSING_IRCTC = "N.A."

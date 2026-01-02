@@ -1,6 +1,6 @@
 from pathlib import Path
 from typing import Self
-from datetime import datetime
+from datetime import datetime, timedelta
 from httplib2 import ServerNotFoundError
 
 from google.auth.transport.requests import Request
@@ -9,7 +9,8 @@ from google_auth_oauthlib.flow import InstalledAppFlow
 from googleapiclient.discovery import build
 from googleapiclient.errors import HttpError, UnknownApiNameOrVersion
 
-from common import SCOPES
+from common import SCOPES, CalendarEventColor, ReminderNotificationType
+
 
 
 class GServicesHandler:
@@ -65,7 +66,7 @@ class GServicesHandler:
             return dt.astimezone()
         return dt
 
-    def insert_event(self: Self, summary: str, location: str, description: str, start: datetime, end: datetime) -> None:
+    def insert_event(self: Self, summary: str, location: str, description: str, start: datetime, end: datetime, reminders: list[timedelta], reminder_type: ReminderNotificationType, color: CalendarEventColor) -> None:
         try:
             event_data = {
                 "summary": summary,
@@ -77,6 +78,16 @@ class GServicesHandler:
                 "end": {
                     "dateTime": self._ensure_tz_aware(end).isoformat(),
                 },
+                "reminders": {
+                    "useDefault": False,
+                    "overrides": [
+                        {
+                            "method": reminder_type.name,
+                            "minutes": reminder.total_seconds() // 60
+                        } for reminder in reminders
+                    ]
+                },
+                "colorId": str(color.value)
             }
 
             self._calendar.events().insert(
