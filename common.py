@@ -28,6 +28,7 @@ SCOPES = ["https://www.googleapis.com/auth/calendar.events.owned"]
 GOOGLE_CREDENTIALS_FP = Path(__file__).parent / "credentials.json"
 GOOGLE_TOKEN_FP = Path(__file__).parent / "token.json"
 
+DEFAULT_CALENDAR_ID = "primary"
 REMINDER_NOTIFICATION_TYPE = ReminderNotificationType.popup
 DEFAULT_REMINDERS = [
     timedelta(minutes=30),

@@ -1,5 +1,7 @@
+import sys
+from typing import TypeVar
 from pathlib import Path
-from typing import Self
+from typing import Callable, Self
 from datetime import datetime, timedelta
 from httplib2 import ServerNotFoundError
 
@@ -9,7 +11,7 @@ from google_auth_oauthlib.flow import InstalledAppFlow
 from googleapiclient.discovery import build
 from googleapiclient.errors import HttpError, UnknownApiNameOrVersion
 
-from common import SCOPES, CalendarEventColor, ReminderNotificationType
+from common import DEFAULT_CALENDAR_ID, SCOPES, CalendarEventColor, ReminderNotificationType
 
 
 
@@ -66,38 +68,63 @@ class GServicesHandler:
             return dt.astimezone()
         return dt
 
-    def insert_event(self: Self, summary: str, location: str, description: str, start: datetime, end: datetime, reminders: list[timedelta], reminder_type: ReminderNotificationType, color: CalendarEventColor) -> None:
-        try:
-            event_data = {
-                "summary": summary,
-                "location": location,
-                "description": description,
-                "start": {
-                    "dateTime": self._ensure_tz_aware(start).isoformat(),
-                },
-                "end": {
-                    "dateTime": self._ensure_tz_aware(end).isoformat(),
-                },
-                "reminders": {
-                    "useDefault": False,
-                    "overrides": [
-                        {
-                            "method": reminder_type.name,
-                            "minutes": reminder.total_seconds() // 60
-                        } for reminder in reminders
-                    ]
-                },
-                "colorId": str(color.value)
-            }
+    T = TypeVar("T")
 
-            self._calendar.events().insert(
-                calendarId='primary', body=event_data).execute()
+    def _perform_gapi_call(self: Self, fn: Callable[[], T]) -> T:
+        try:
+            return fn()
         except HttpError as error:
             self._handle_http_error(error)
         except ServerNotFoundError as error:
             self._handle_server_not_found_error(error)
         except Exception as error:
             self._handle_event_error(error)
+        sys.exit(-1)
 
-    def search_event(self: Self, ) -> list[object]:
-        return []
+    def insert_event(self: Self, ttc_id: str, summary: str, location: str, description: str, start: datetime, end: datetime, reminders: list[timedelta], reminder_type: ReminderNotificationType, color: CalendarEventColor) -> None:
+        event_data = {
+            "summary": summary,
+            "location": location,
+            "description": description,
+            "start": {
+                "dateTime": self._ensure_tz_aware(start).isoformat(),
+            },
+            "end": {
+                "dateTime": self._ensure_tz_aware(end).isoformat(),
+            },
+            "reminders": {
+                "useDefault": False,
+                "overrides": [
+                    {
+                        "method": reminder_type.name,
+                        "minutes": reminder.total_seconds() // 60
+                    } for reminder in reminders
+                ]
+            },
+            "colorId": str(color.value),
+            "extendedProperties": {
+                "private": {
+                    "ttc_id": ttc_id
+                }
+            }
+        }
+
+        self._perform_gapi_call(
+            lambda: self._calendar.events()
+            .insert(
+                calendarId=DEFAULT_CALENDAR_ID,
+                body=event_data
+            )
+            .execute()
+        )
+
+    def search_event(self: Self, ttc_id: str) -> list[object]:
+        return self._perform_gapi_call(
+            lambda: self._calendar.events()
+            .list(
+                calendarId=DEFAULT_CALENDAR_ID,
+                privateExtendedProperty=f"ttc_id={ttc_id}",
+                singleEvents=True
+            )
+            .execute()
+        ).get("items", [])

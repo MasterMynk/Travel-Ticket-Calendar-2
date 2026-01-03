@@ -73,7 +73,7 @@ class Ticket:
         )
 
     @property
-    def identifier(self: Self) -> str:
+    def ttc_id(self: Self) -> str:
         return f"ttc{self._data.departure.where}{self._data.arrival.where}{self._data.departure.when.isoformat()}".replace(' ', '_')
 
     @property

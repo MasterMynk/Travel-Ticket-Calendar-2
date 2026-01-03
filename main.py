@@ -17,8 +17,9 @@ def main() -> None:
     # ticket = Ticket(Path.home() / "travels/MAO NZM 170126.pdf")
     # ticket = Ticket(Path.home() / "travels/NZM JUC 180125.pdf")
     # ticket = Ticket(Path.home() / "travels/NZM MAO 202525.pdf")
-    gsh.insert_event(ticket.summary, ticket.from_where,
-                     ticket.description, ticket.departure, ticket.arrival, DEFAULT_REMINDERS, REMINDER_NOTIFICATION_TYPE, DEFAULT_EVENT_COLOR)
+    print(gsh.search_event(ticket.ttc_id))
+    # gsh.insert_event(ticket.ttc_id, ticket.summary, ticket.from_where,
+    #                  ticket.description, ticket.departure, ticket.arrival, DEFAULT_REMINDERS, REMINDER_NOTIFICATION_TYPE, DEFAULT_EVENT_COLOR)
 
 if __name__ == "__main__":
     main()
