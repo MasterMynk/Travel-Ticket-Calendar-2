@@ -8,6 +8,7 @@ from google.auth.exceptions import RefreshError
 from google.auth import external_account_authorized_user
 
 from GCalendar import GCalendar
+from GDrive import GDrive
 from common import SCOPES
 
 
@@ -29,6 +30,7 @@ class GServicesHandler:
             token.write(credentials.to_json())
 
         self.calendar = GCalendar(credentials)
+        self.drive = GDrive(credentials)
 
     @staticmethod
     def _generate_credentials(credentials_fp: Path, token_fp: Path) -> Credentials | external_account_authorized_user.Credentials:

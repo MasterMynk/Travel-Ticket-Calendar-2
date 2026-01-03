@@ -13,15 +13,18 @@ def main() -> None:
 
     # config = ConfigurationHandler()
     # load(config)
-    ticket = Ticket(Path.home() / "travels/JUC NZM 191225.pdf")
+    ticket_fp = Path.home() / "travels/JUC NZM 191225.pdf"
+    ticket = Ticket(ticket_fp)
     # ticket = Ticket(Path.home() / "travels/MAO NZM 170126.pdf")
     # ticket = Ticket(Path.home() / "travels/NZM JUC 180125.pdf")
     # ticket = Ticket(Path.home() / "travels/NZM MAO 202525.pdf")
-    if len(gsh.calendar.search_event(ticket.ttc_id)) == 0:
-        gsh.calendar.insert_event(ticket.ttc_id, ticket.summary, ticket.from_where,
-                                  ticket.description, ticket.departure, ticket.arrival, DEFAULT_REMINDERS, REMINDER_NOTIFICATION_TYPE, DEFAULT_EVENT_COLOR)
-    else:
-        print("Found the event")
+    print(gsh.drive.upload_pdf(ticket_fp))
+
+    # if len(gsh.calendar.search_event(ticket.ttc_id)) == 0:
+    #     gsh.calendar.insert_event(ticket.ttc_id, ticket.summary, ticket.from_where,
+    #                               ticket.description, ticket.departure, ticket.arrival, DEFAULT_REMINDERS, REMINDER_NOTIFICATION_TYPE, DEFAULT_EVENT_COLOR)
+    # else:
+    #     print("Found the event")
 
 if __name__ == "__main__":
     main()
