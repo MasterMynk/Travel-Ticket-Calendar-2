@@ -1,12 +1,19 @@
-from typing import TypeVar, Self, Callable
+from typing import Any, TypeVar, Self, Callable
 from datetime import datetime
 import sys
 from httplib2 import ServerNotFoundError
 
-from googleapiclient.errors import HttpError
+from googleapiclient.errors import HttpError, UnknownApiNameOrVersion
 
 
 class GService:
+    def __init__(self: Self, service_builder: Callable[[], Any]):
+        try:
+            self._service = service_builder()
+        except UnknownApiNameOrVersion as error:
+            print(f"Invalid API or version: {error}")
+            sys.exit(-1)
+
     @staticmethod
     def _ensure_tz_aware(dt: datetime) -> datetime:
         if dt.tzinfo is None or dt.tzinfo.utcoffset(dt) is None:

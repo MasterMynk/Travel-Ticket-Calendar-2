@@ -4,7 +4,6 @@ from datetime import datetime, timedelta
 from googleapiclient.discovery import build
 from google.oauth2.credentials import Credentials
 from google.auth import external_account_authorized_user
-from googleapiclient.errors import UnknownApiNameOrVersion
 
 from GService import GService
 from common import ReminderNotificationType, DEFAULT_CALENDAR_ID, CalendarEventColor
@@ -12,11 +11,7 @@ from common import ReminderNotificationType, DEFAULT_CALENDAR_ID, CalendarEventC
 
 class GCalendar(GService):
     def __init__(self: Self, credentials: Credentials | external_account_authorized_user.Credentials) -> None:
-        super()
-        try:
-            self._service = build("calendar", "v3", credentials=credentials)
-        except UnknownApiNameOrVersion as error:
-            print(f"Invalid API or version: {error}")
+        super().__init__(lambda: build("calendar", "v3", credentials=credentials))
 
     def insert_event(self: Self, ttc_id: str, summary: str, location: str, description: str, start: datetime, end: datetime, reminders: list[timedelta], reminder_type: ReminderNotificationType, color: CalendarEventColor) -> None:
         event_data = {

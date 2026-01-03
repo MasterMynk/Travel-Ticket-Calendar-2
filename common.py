@@ -1,4 +1,3 @@
-# If modifying these scopes, delete the file token.json.
 from enum import IntEnum, auto
 from datetime import timedelta
 from pathlib import Path
@@ -23,7 +22,8 @@ class CalendarEventColor(IntEnum):
     Tomato = 11
 
 
-SCOPES = ["https://www.googleapis.com/auth/calendar.events.owned"]
+SCOPES = ["https://www.googleapis.com/auth/calendar.events.owned",
+          "https://www.googleapis.com/auth/drive.file"]
 
 GOOGLE_CREDENTIALS_FP = Path(__file__).parent / "credentials.json"
 GOOGLE_TOKEN_FP = Path(__file__).parent / "token.json"

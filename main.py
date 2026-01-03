@@ -20,6 +20,8 @@ def main() -> None:
     if len(gsh.calendar.search_event(ticket.ttc_id)) == 0:
         gsh.calendar.insert_event(ticket.ttc_id, ticket.summary, ticket.from_where,
                                   ticket.description, ticket.departure, ticket.arrival, DEFAULT_REMINDERS, REMINDER_NOTIFICATION_TYPE, DEFAULT_EVENT_COLOR)
+    else:
+        print("Found the event")
 
 if __name__ == "__main__":
     main()
