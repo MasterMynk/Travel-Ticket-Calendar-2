@@ -5,6 +5,7 @@ from googleapiclient.discovery import build
 from google.oauth2.credentials import Credentials
 from google.auth import external_account_authorized_user
 
+from GDrive import FileUploadResponse
 from GService import GService
 from common import ReminderNotificationType, DEFAULT_CALENDAR_ID, CalendarEventColor
 
@@ -13,7 +14,7 @@ class GCalendar(GService):
     def __init__(self: Self, credentials: Credentials | external_account_authorized_user.Credentials) -> None:
         super().__init__(lambda: build("calendar", "v3", credentials=credentials))
 
-    def insert_event(self: Self, ttc_id: str, summary: str, location: str, description: str, start: datetime, end: datetime, reminders: list[timedelta], reminder_type: ReminderNotificationType, color: CalendarEventColor) -> None:
+    def insert_event(self: Self, ttc_id: str, summary: str, location: str, description: str, ticket_upload: FileUploadResponse, start: datetime, end: datetime, reminders: list[timedelta], reminder_type: ReminderNotificationType, color: CalendarEventColor) -> None:
         event_data = {
             "summary": summary,
             "location": location,
@@ -38,20 +39,24 @@ class GCalendar(GService):
                 "private": {
                     "ttc_id": ttc_id
                 }
-            }
+            },
+            "attachments": [
+                ticket_upload.gcalendar_format
+            ]
         }
 
         self._perform_gapi_call(
             lambda: self._service.events()
             .insert(
                 calendarId=DEFAULT_CALENDAR_ID,
-                body=event_data
+                body=event_data,
+                supportsAttachments=True
             )
             .execute()
         )
 
-    def search_event(self: Self, ttc_id: str) -> list[object]:
-        return self._perform_gapi_call(
+    def event_exists(self: Self, ttc_id: str) -> bool:
+        return len(self._perform_gapi_call(
             lambda: self._service.events()
             .list(
                 calendarId=DEFAULT_CALENDAR_ID,
@@ -59,4 +64,4 @@ class GCalendar(GService):
                 singleEvents=True
             )
             .execute()
-        ).get("items", [])
+        )["items"]) > 0

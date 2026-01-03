@@ -17,6 +17,15 @@ class FileUploadResponse:
     mimeType: str
     webViewLink: str
 
+    @property
+    def gcalendar_format(self: Self) -> object:
+        return {
+            'fileId': self.id,
+            'title': self.name,
+            'mimeType': self.mimeType,
+            'fileUrl': self.webViewLink
+        }
+
 
 class GDrive(GService):
     def __init__(self: Self, credentials: Credentials | external_account_authorized_user.Credentials) -> None:

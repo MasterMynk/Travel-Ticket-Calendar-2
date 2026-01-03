@@ -54,3 +54,5 @@ REFRESH_TIME = timedelta(weeks=1)
 
 RAIL_RADAR_CREDENTIALS_FP = Path(
     __file__).parent / "rail_radar_credentials.json"
+
+TICKET_FOLDER = Path.home() / "travels/"
