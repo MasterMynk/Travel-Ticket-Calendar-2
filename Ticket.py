@@ -32,7 +32,8 @@ class Ticket:
 
         # Collect as much data as you can from the ticket itself using regex
         for search_group, pattern in IRCTC_REGEX.items():
-            match = re.search(pattern, ticket_data, flags=re.DOTALL)
+            match = re.search(pattern, ticket_data,
+                              flags=re.DOTALL | re.IGNORECASE)
 
             if match is None:
                 print(
