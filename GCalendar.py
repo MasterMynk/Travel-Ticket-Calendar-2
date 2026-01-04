@@ -1,3 +1,4 @@
+from pathlib import Path
 from typing import Self
 from datetime import datetime, timedelta
 
@@ -7,12 +8,15 @@ from google.auth import external_account_authorized_user
 
 from GDrive import FileUploadResponse
 from GService import GService
+from Logger import LogLevel, log
 from common import ReminderNotificationType, DEFAULT_CALENDAR_ID, CalendarEventColor
 
 
 class GCalendar(GService):
-    def __init__(self: Self, credentials: Credentials | external_account_authorized_user.Credentials) -> None:
-        super().__init__(lambda: build("calendar", "v3", credentials=credentials))
+    def __init__(self: Self, token_fp: Path, credentials: Credentials | external_account_authorized_user.Credentials) -> None:
+        log(LogLevel.Status, "Initializing Google Calendar API")
+        super().__init__(token_fp, lambda: build("calendar", "v3", credentials=credentials))
+        log(LogLevel.Status, "Done initializing Google Calendar API")
 
     def insert_event(self: Self, ttc_id: str, summary: str, location: str, description: str, ticket_upload: FileUploadResponse, start: datetime, end: datetime, reminders: list[timedelta], reminder_type: ReminderNotificationType, color: CalendarEventColor) -> None:
         event_data = {

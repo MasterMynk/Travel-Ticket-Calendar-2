@@ -9,6 +9,7 @@ from googleapiclient.http import MediaFileUpload
 
 from GService import GService
 
+from Logger import log, LogLevel
 
 @dataclass
 class FileUploadResponse:
@@ -28,8 +29,10 @@ class FileUploadResponse:
 
 
 class GDrive(GService):
-    def __init__(self: Self, credentials: Credentials | external_account_authorized_user.Credentials) -> None:
-        super().__init__(lambda: build("drive", "v3", credentials=credentials))
+    def __init__(self: Self, token_fp: Path, credentials: Credentials | external_account_authorized_user.Credentials) -> None:
+        log(LogLevel.Status, "Initializing Google Drive API")
+        super().__init__(token_fp, lambda: build("drive", "v3", credentials=credentials))
+        log(LogLevel.Status, "Done initializing Google Drive API")
 
     def upload_pdf(self: Self, path: Path) -> FileUploadResponse:
         return FileUploadResponse(

@@ -1,17 +1,22 @@
+from pathlib import Path
 from typing import Any, TypeVar, Self, Callable
 from datetime import datetime
 import sys
 from httplib2 import ServerNotFoundError
 
 from googleapiclient.errors import HttpError, UnknownApiNameOrVersion
+from google.auth.exceptions import RefreshError
+
+from Logger import LogLevel, log
 
 
 class GService:
-    def __init__(self: Self, service_builder: Callable[[], Any]):
+    def __init__(self: Self, token_fp: Path, service_builder: Callable[[], Any]) -> None:
+        self._token_fp = token_fp
         try:
             self._service = service_builder()
         except UnknownApiNameOrVersion as error:
-            print(f"Invalid API or version: {error}")
+            log(LogLevel.Error, f"Invalid API or version: {error}. Exiting...")
             sys.exit(-1)
 
     @staticmethod
@@ -38,6 +43,11 @@ class GService:
     def _handle_event_error(error: Exception) -> None:
         print(f"Failed to create event: {error}")
 
+    def _handle_refresh_error(self: Self, error: RefreshError) -> None:
+        log(LogLevel.Error,
+            f"Permissions revoked from Google's side {error}. Deleting '{self._token_fp}' and exiting...")
+        self._token_fp.unlink(missing_ok=True)
+
     T = TypeVar("T")
 
     def _perform_gapi_call(self: Self, fn: Callable[[], T]) -> T:
@@ -47,6 +57,8 @@ class GService:
             self._handle_http_error(error)
         except ServerNotFoundError as error:
             self._handle_server_not_found_error(error)
+        except RefreshError as error:
+            self._handle_refresh_error(error)
         except Exception as error:
             self._handle_event_error(error)
         sys.exit(-1)
