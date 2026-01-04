@@ -1,29 +1,23 @@
 from pathlib import Path
 from typing import Self
-from watchdog.events import DirCreatedEvent, FileCreatedEvent, FileSystemEventHandler
+from watchdog.events import DirCreatedEvent, FileCreatedEvent,  PatternMatchingEventHandler
 
 from GServicesHandler import GServicesHandler
 from Ticket import Ticket
 from common import GOOGLE_CREDENTIALS_FP, GOOGLE_TOKEN_FP, DEFAULT_REMINDERS, REMINDER_NOTIFICATION_TYPE, DEFAULT_EVENT_COLOR
 
 
-class TicketFolderHandler(FileSystemEventHandler):
+class TicketFolderHandler(PatternMatchingEventHandler):
     def __init__(self: Self, monitored_fp: Path) -> None:
-        super().__init__()
+        super().__init__(patterns=["*.pdf"], ignore_directories=True)
         self._gsh = GServicesHandler(GOOGLE_CREDENTIALS_FP, GOOGLE_TOKEN_FP)
 
         for ticket_fp in monitored_fp.glob("*.pdf"):
             self._process_ticket(ticket_fp)
 
     def on_created(self: Self, event: DirCreatedEvent | FileCreatedEvent) -> None:
-        if isinstance(event, DirCreatedEvent):
-            print("Directory Created. Not handling ts")
-            return
-
         if isinstance(event.src_path, str):
-            path = Path(event.src_path)
-            if path.is_file() and path.suffix.lower() == ".pdf":
-                self._process_ticket(path)
+            self._process_ticket(Path(event.src_path))
 
     def _process_ticket(self: Self, ticket_fp: Path) -> None:
         print(f"Processing {ticket_fp}")

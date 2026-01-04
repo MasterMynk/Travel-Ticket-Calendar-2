@@ -1,3 +1,4 @@
+import sys
 from TicketFolderHandler import TicketFolderHandler
 from common import TICKET_FOLDER
 
@@ -15,7 +16,14 @@ def main() -> None:
         str(TICKET_FOLDER),
         recursive=True
     )
-    observer.start()
+    try:
+        observer.start()
+    except FileNotFoundError as error:
+        print(
+            f"Error: '{TICKET_FOLDER}' doesn't exist hence cannot monitor it")
+        print(error)
+        print("Exiting...")
+        sys.exit(-1)
 
     try:
         observer.join()
