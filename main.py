@@ -7,13 +7,11 @@ from watchdog.observers import Observer
 def main() -> None:
     # config = ConfigurationHandler()
     # load(config)
-    # for ticket_fp in TICKET_FOLDER.glob("*.pdf"):
-    #     process_ticket(gsh, ticket_fp)
 
     observer = Observer()
 
     observer.schedule(
-        TicketFolderHandler(),
+        TicketFolderHandler(TICKET_FOLDER),
         str(TICKET_FOLDER),
         recursive=True
     )

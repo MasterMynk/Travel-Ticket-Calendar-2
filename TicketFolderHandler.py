@@ -1,5 +1,5 @@
 from pathlib import Path
-from typing import Callable, Self
+from typing import Self
 from watchdog.events import DirCreatedEvent, FileCreatedEvent, FileSystemEventHandler
 
 from GServicesHandler import GServicesHandler
@@ -8,9 +8,12 @@ from common import GOOGLE_CREDENTIALS_FP, GOOGLE_TOKEN_FP, DEFAULT_REMINDERS, RE
 
 
 class TicketFolderHandler(FileSystemEventHandler):
-    def __init__(self: Self) -> None:
+    def __init__(self: Self, monitored_fp: Path) -> None:
         super().__init__()
         self._gsh = GServicesHandler(GOOGLE_CREDENTIALS_FP, GOOGLE_TOKEN_FP)
+
+        for ticket_fp in monitored_fp.glob("*.pdf"):
+            self._process_ticket(ticket_fp)
 
     def on_created(self: Self, event: DirCreatedEvent | FileCreatedEvent) -> None:
         if isinstance(event, DirCreatedEvent):
@@ -35,3 +38,4 @@ class TicketFolderHandler(FileSystemEventHandler):
                                             ticket.description, upload_response, ticket.departure, ticket.arrival, DEFAULT_REMINDERS, REMINDER_NOTIFICATION_TYPE, DEFAULT_EVENT_COLOR)
         else:
             print("\tFound the event. Not creating it again")
+        print(f"Finished processing {ticket_fp}\n")
