@@ -1,6 +1,6 @@
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Self
+from typing import Callable, Self
 
 from googleapiclient.discovery import build
 from google.oauth2.credentials import Credentials
@@ -29,22 +29,26 @@ class FileUploadResponse:
 
 
 class GDrive(GService):
-    def __init__(self: Self, token_fp: Path, credentials: Credentials | external_account_authorized_user.Credentials) -> None:
-        log(LogLevel.Status, "Initializing Google Drive API")
-        super().__init__(token_fp, lambda: build("drive", "v3", credentials=credentials))
+    def __init__(self: Self, token_fp: Path, credentials: Credentials | external_account_authorized_user.Credentials, refresh_credentials: Callable) -> None:
+        super().__init__(token_fp, "drive", "v3", credentials, refresh_credentials)
         log(LogLevel.Status, "Done initializing Google Drive API")
 
-    def upload_pdf(self: Self, path: Path) -> FileUploadResponse:
-        return FileUploadResponse(
-            **self._service.files().create(
-                body={
-                    "name": path.name
-                },
-                media_body=MediaFileUpload(
-                    path,
-                    mimetype="application/pdf",
-                    resumable=True
-                ),
-                fields="id,name,webViewLink,mimeType"
-            ).execute()
-        )
+    def upload_pdf(self: Self, path: Path) -> FileUploadResponse | None:
+        try:
+            return FileUploadResponse(
+                **self._perform_gapi_call(
+                    lambda: self._service.files().create(
+                        body={
+                            "name": path.name
+                        },
+                        media_body=MediaFileUpload(
+                            path,
+                            mimetype="application/pdf",
+                            resumable=True
+                        ),
+                        fields="id,name,webViewLink,mimeType"
+                    ).execute()
+                )
+            )
+        except:
+            return None

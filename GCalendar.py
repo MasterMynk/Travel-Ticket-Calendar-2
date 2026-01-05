@@ -1,8 +1,7 @@
 from pathlib import Path
-from typing import Self
+from typing import Callable, Self
 from datetime import datetime, timedelta
 
-from googleapiclient.discovery import build
 from google.oauth2.credentials import Credentials
 from google.auth import external_account_authorized_user
 
@@ -13,12 +12,11 @@ from common import ReminderNotificationType, DEFAULT_CALENDAR_ID, CalendarEventC
 
 
 class GCalendar(GService):
-    def __init__(self: Self, token_fp: Path, credentials: Credentials | external_account_authorized_user.Credentials) -> None:
-        log(LogLevel.Status, "Initializing Google Calendar API")
-        super().__init__(token_fp, lambda: build("calendar", "v3", credentials=credentials))
+    def __init__(self: Self, token_fp: Path, credentials: Credentials | external_account_authorized_user.Credentials, refresh_credentials: Callable) -> None:
+        super().__init__(token_fp, "calendar", "v3", credentials, refresh_credentials)
         log(LogLevel.Status, "Done initializing Google Calendar API")
 
-    def insert_event(self: Self, ttc_id: str, summary: str, location: str, description: str, ticket_upload: FileUploadResponse, start: datetime, end: datetime, reminders: list[timedelta], reminder_type: ReminderNotificationType, color: CalendarEventColor) -> None:
+    def insert_event(self: Self, ttc_id: str, summary: str, location: str, description: str, ticket_upload: FileUploadResponse | None, start: datetime, end: datetime, reminders: list[timedelta], reminder_type: ReminderNotificationType, color: CalendarEventColor) -> None:
         event_data = {
             "summary": summary,
             "location": location,
@@ -44,17 +42,19 @@ class GCalendar(GService):
                     "ttc_id": ttc_id
                 }
             },
-            "attachments": [
+        }
+
+        if ticket_upload:
+            event_data["attachments"] = [
                 ticket_upload.gcalendar_format
             ]
-        }
 
         self._perform_gapi_call(
             lambda: self._service.events()
             .insert(
                 calendarId=DEFAULT_CALENDAR_ID,
                 body=event_data,
-                supportsAttachments=True
+                supportsAttachments=ticket_upload is not None
             )
             .execute()
         )

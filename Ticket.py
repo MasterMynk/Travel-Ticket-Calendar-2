@@ -15,9 +15,10 @@ from common import IRCTC_DATE_FORMAT, IRCTC_DATETIME_FORMAT, IRCTC_REGEX, DATA_M
 class Ticket:
     def __init__(self: Self, filepath: Path) -> None:
         self._filepath = filepath
-        self._pdf = PdfReader(self._filepath)
 
-        ticket_data = self._pdf.pages[0].extract_text()
+        log(LogLevel.Status, "\tExtracting Ticket text")
+        with PdfReader(self._filepath) as pdf:
+            ticket_data = pdf.pages[0].extract_text()
 
         if ticket_data.find("IRCTC") != -1:
             self._data = self._process_as_irctc_tkt(ticket_data)
@@ -26,10 +27,8 @@ class Ticket:
             log(LogLevel.Error, "Unimplemented feature. Skipping ticket...")
             raise Exception("Failure to parse ticket.")
 
-    def __del__(self: Self) -> None:
-        self._pdf.close()
-
     def _process_as_irctc_tkt(self: Self, ticket_data: str) -> TravelData:
+        log(LogLevel.Status, "\tIdentified ticket as IRCTC ticket")
         data = {}
 
         # Collect as much data as you can from the ticket itself using regex
@@ -38,17 +37,16 @@ class Ticket:
                               flags=re.DOTALL | re.IGNORECASE)
 
             if match is None:
-                log(LogLevel.Error, "Failure to parse IRCTC ticket")
-                log(LogLevel.Error,
-                    f"Couldn't find something in {search_group} saerch group from IRCTC ticket {self._filepath}")
-                log(LogLevel.Error, "Exiting...")
-                sys.exit(-1)
+                raise Exception(
+                    f"IRCTC ticket.\nCouldn't find something in {search_group} search group from IRCTC ticket {self._filepath}")
 
             data.update(match.groupdict())
 
         if data["arrival_datetime"] == DATA_MISSING_IRCTC or data["departure_datetime"] == DATA_MISSING_IRCTC:
             data["departure_date"] = datetime.strptime(
                 data["departure_date"], IRCTC_DATE_FORMAT)
+            log(LogLevel.Status,
+                f"\tFiguring out missing information for train number {data["train_number"]}")
             rrh = RailRadarHandler(data["train_number"], data["departure_date"],
                                    data["departure_station_code"], data["arrival_station_code"])
 

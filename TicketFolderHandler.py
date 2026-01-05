@@ -33,18 +33,23 @@ class TicketFolderHandler(PatternMatchingEventHandler):
             ticket = Ticket(ticket_fp)
         except Exception as error:
             log(LogLevel.Error,
-                f"Failure to retrieve crucial data for ticket parsing from RailRadar: {error}")
+                f"Failure to parse ticket: {error}")
             log(LogLevel.Error,
                 "Unimplemented feature of user intervention to supply correct info. Skipping ticket...")
             return
 
-        if not self._gsh.calendar.event_exists(ticket.ttc_id):
-            log(LogLevel.Status, f"\tUploading {ticket_fp} to Google Drive")
-            upload_response = self._gsh.drive.upload_pdf(ticket_fp)
+        try:
+            if self._gsh.calendar.event_exists(ticket.ttc_id):
+                log(LogLevel.Status, "\tFound the event. Not creating it again")
+            else:
+                log(LogLevel.Status,
+                    f"\tUploading {ticket_fp} to Google Drive")
+                upload_response = self._gsh.drive.upload_pdf(ticket_fp)
 
-            log(LogLevel.Status, f"\tCreating event")
-            self._gsh.calendar.insert_event(ticket.ttc_id, ticket.summary, ticket.from_where,
-                                            ticket.description, upload_response, ticket.departure, ticket.arrival, DEFAULT_REMINDERS, REMINDER_NOTIFICATION_TYPE, DEFAULT_EVENT_COLOR)
-        else:
-            print("\tFound the event. Not creating it again")
-        log(LogLevel.Status, f"Finished processing {ticket_fp}\n")
+                log(LogLevel.Status, f"\tCreating event")
+                self._gsh.calendar.insert_event(ticket.ttc_id, ticket.summary, ticket.from_where,
+                                                ticket.description, upload_response, ticket.departure, ticket.arrival, DEFAULT_REMINDERS, REMINDER_NOTIFICATION_TYPE, DEFAULT_EVENT_COLOR)
+            log(LogLevel.Status, f"Finished processing {ticket_fp}")
+        except Exception as error:
+            log(LogLevel.Error,
+                "Failure to perform some Google API call. Skipping ticket...")

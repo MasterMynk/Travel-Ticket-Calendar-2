@@ -1,23 +1,37 @@
 from pathlib import Path
+import time
 from typing import Any, TypeVar, Self, Callable
 from datetime import datetime
 import sys
 from httplib2 import ServerNotFoundError
 
+from googleapiclient.discovery import build
 from googleapiclient.errors import HttpError, UnknownApiNameOrVersion
 from google.auth.exceptions import RefreshError
+from google.oauth2.credentials import Credentials
+from google.auth import external_account_authorized_user
 
 from Logger import LogLevel, log
+from common import MAX_RETRIES_FOR_NETWORK_REQUESTS, calculate_backoff
 
 
 class GService:
-    def __init__(self: Self, token_fp: Path, service_builder: Callable[[], Any]) -> None:
+    def __init__(self: Self, token_fp: Path, api_name: str, api_version: str, credentials: Credentials | external_account_authorized_user.Credentials, refresh_credentials: Callable) -> None:
         self._token_fp = token_fp
+        self._api_name = api_name
+        self._api_version = api_version
+        self._service = self._build_service(credentials)
+        self._refresh_credentials = refresh_credentials
+
+    def _build_service(self: Self, credentials: Credentials | external_account_authorized_user.Credentials) -> Any:
         try:
-            self._service = service_builder()
+            return build(self._api_name, self._api_version, credentials=credentials)
         except UnknownApiNameOrVersion as error:
             log(LogLevel.Error, f"Invalid API or version: {error}. Exiting...")
             sys.exit(-1)
+
+    def rebuild(self: Self, credentials: Credentials | external_account_authorized_user.Credentials) -> None:
+        self._service = self._build_service(credentials)
 
     @staticmethod
     def _ensure_tz_aware(dt: datetime) -> datetime:
@@ -27,7 +41,6 @@ class GService:
 
     @staticmethod
     def _handle_http_error(error: HttpError) -> None:
-        # TODO: Handle this better perhaps checking the code and acting accordingly
         print(f"An error occurred: {error}")
         print(f"Status code: {error.status_code}")
         print(f"Reason: {error.reason}")
@@ -45,20 +58,25 @@ class GService:
 
     def _handle_refresh_error(self: Self, error: RefreshError) -> None:
         log(LogLevel.Error,
-            f"Permissions revoked from Google's side {error}. Deleting '{self._token_fp}' and exiting...")
-        self._token_fp.unlink(missing_ok=True)
+            f"Permissions revoked from Google's side {error}. Trying to sign you in again.")
+        self._refresh_credentials()
 
     T = TypeVar("T")
 
     def _perform_gapi_call(self: Self, fn: Callable[[], T]) -> T:
-        try:
-            return fn()
-        except HttpError as error:
-            self._handle_http_error(error)
-        except ServerNotFoundError as error:
-            self._handle_server_not_found_error(error)
-        except RefreshError as error:
-            self._handle_refresh_error(error)
-        except Exception as error:
-            self._handle_event_error(error)
-        sys.exit(-1)
+        for attempt in range(MAX_RETRIES_FOR_NETWORK_REQUESTS):
+            try:
+                return fn()
+            except HttpError as error:
+                self._handle_http_error(error)
+            except ServerNotFoundError as error:
+                self._handle_server_not_found_error(error)
+            except RefreshError as error:
+                self._handle_refresh_error(error)
+            except Exception as error:
+                self._handle_event_error(error)
+            log(LogLevel.Status,
+                f"Retrying Google API call in {calculate_backoff(attempt)} seconds")
+            time.sleep(calculate_backoff(attempt))
+
+        raise Exception

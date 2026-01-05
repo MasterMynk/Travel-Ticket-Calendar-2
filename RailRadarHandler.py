@@ -73,6 +73,8 @@ class RailRadarHandler:
             "Connection Error. Are you connected to the internet?")
 
     def _api_call(self: Self, header: Dict) -> Dict:
+        log(LogLevel.Status, f"\t\tPerforming API call to RailRadar")
+
         response = requests.get(
             f"https://api.railradar.in/api/v1/trains/{self._train_number}",
             headers=header
