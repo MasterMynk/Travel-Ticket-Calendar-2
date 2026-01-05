@@ -29,7 +29,14 @@ class TicketFolderHandler(PatternMatchingEventHandler):
 
     def _process_ticket(self: Self, ticket_fp: Path) -> None:
         log(LogLevel.Status, f"Processing {ticket_fp}")
-        ticket = Ticket(ticket_fp)
+        try:
+            ticket = Ticket(ticket_fp)
+        except Exception as error:
+            log(LogLevel.Error,
+                f"Failure to retrieve crucial data for ticket parsing from RailRadar: {error}")
+            log(LogLevel.Error,
+                "Unimplemented feature of user intervention to supply correct info. Skipping ticket...")
+            return
 
         if not self._gsh.calendar.event_exists(ticket.ttc_id):
             log(LogLevel.Status, f"\tUploading {ticket_fp} to Google Drive")

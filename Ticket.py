@@ -6,6 +6,7 @@ import re
 
 from pypdf import PdfReader
 
+from Logger import LogLevel, log
 from RailRadarHandler import RailRadarHandler
 from TravelData import TravelData, TravelDataField, TravelType
 from common import IRCTC_DATE_FORMAT, IRCTC_DATETIME_FORMAT, IRCTC_REGEX, DATA_MISSING_IRCTC
@@ -21,8 +22,9 @@ class Ticket:
         if ticket_data.find("IRCTC") != -1:
             self._data = self._process_as_irctc_tkt(ticket_data)
         else:
-            print("Couldn't identify the type of ticket to parse. Unimplemented feature")
-            sys.exit(-1)
+            log(LogLevel.Error, "Couldn't identify the type of ticket to parse.")
+            log(LogLevel.Error, "Unimplemented feature. Skipping ticket...")
+            raise Exception("Failure to parse ticket.")
 
     def __del__(self: Self) -> None:
         self._pdf.close()
@@ -36,9 +38,10 @@ class Ticket:
                               flags=re.DOTALL | re.IGNORECASE)
 
             if match is None:
-                print(
+                log(LogLevel.Error, "Failure to parse IRCTC ticket")
+                log(LogLevel.Error,
                     f"Couldn't find something in {search_group} saerch group from IRCTC ticket {self._filepath}")
-                print("Exiting...")
+                log(LogLevel.Error, "Exiting...")
                 sys.exit(-1)
 
             data.update(match.groupdict())
@@ -46,9 +49,8 @@ class Ticket:
         if data["arrival_datetime"] == DATA_MISSING_IRCTC or data["departure_datetime"] == DATA_MISSING_IRCTC:
             data["departure_date"] = datetime.strptime(
                 data["departure_date"], IRCTC_DATE_FORMAT)
-
-            rrh = RailRadarHandler(data["train_number"],
-                                   data["departure_date"], data["departure_station_code"], data["arrival_station_code"])
+            rrh = RailRadarHandler(data["train_number"], data["departure_date"],
+                                   data["departure_station_code"], data["arrival_station_code"])
 
             data["departure_datetime"] = rrh.departure_datetime
             data["arrival_datetime"] = rrh.arrival_datetime

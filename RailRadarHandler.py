@@ -1,30 +1,17 @@
 from datetime import datetime, timedelta
 import json
-from typing import Any, Self
+import time
+from typing import Any, Dict, Self
 
 import requests
+from requests import HTTPError, RequestException
 
 from FileCache import FileCache
-from common import RAIL_RADAR_CREDENTIALS_FP
+from Logger import LogLevel, log
+from common import MAX_RETRIES_FOR_NETWORK_REQUESTS, RAIL_RADAR_CREDENTIALS_FP
 
 
 class RailRadarHandler:
-    def _get_train_info(self: Self) -> Any:
-        # TODO: Add error handling
-        with open(RAIL_RADAR_CREDENTIALS_FP, "r") as credentials_json:
-            # Returning a list containing dictionaries representing all the stations the train stops at with only the required fields to save data
-            return [{
-                "day": route["day"],
-                "scheduledDeparture": route.get("scheduledDeparture", 0),
-                "scheduledArrival": route.get("scheduledArrival", 0),
-                "stationCode": route["stationCode"]
-            } for route in requests
-                .get(
-                f"https://api.railradar.in/api/v1/trains/{self._train_number}", headers=json.loads(credentials_json.read()))
-                .json()["data"]["route"]
-                if route["isHalt"] == 1
-            ]
-
     def __init__(self: Self, train_number: str, departure_date: datetime, departure_station_code: str, arrival_station_code: str) -> None:
         self._train_number = train_number
         self._data = FileCache(
@@ -48,3 +35,51 @@ class RailRadarHandler:
             timedelta(minutes=minute_of_departure)
         self.arrival_datetime = departure_date + \
             timedelta(days=days_of_travel, minutes=minute_of_arrival)
+
+    def _get_train_info(self: Self) -> Any:
+        for attempt in range(MAX_RETRIES_FOR_NETWORK_REQUESTS):
+            try:
+                with open(RAIL_RADAR_CREDENTIALS_FP, "r") as credentials_json:
+                    # Returning a list containing dictionaries representing all the stations the train stops at with only the required fields to save data
+                    return [
+                        {
+                            "day": route["day"],
+                            "scheduledDeparture": route.get("scheduledDeparture", 0),
+                            "scheduledArrival": route.get("scheduledArrival", 0),
+                            "stationCode": route["stationCode"]
+                        }
+                        for route in self._api_call(json.loads(credentials_json.read()))["data"]["route"]
+                        if route["isHalt"] == 1
+                    ]
+            except FileNotFoundError:
+                log(LogLevel.Warning,
+                    f"'{RAIL_RADAR_CREDENTIALS_FP}' doesn't exist")
+                raise
+            except HTTPError:
+                raise
+            except RequestException:
+                log(LogLevel.Warning,
+                    f"Network error while retrieving RailRadar info. Retrying in {self._calculate_backoff(attempt)} seconds...")
+                time.sleep(self._calculate_backoff(attempt))
+            except IOError:
+                log(LogLevel.Warning,
+                    f"Couldn't open '{RAIL_RADAR_CREDENTIALS_FP}'")
+                raise
+            except json.JSONDecodeError:
+                log(LogLevel.Warning,
+                    f"Unable to parse '{RAIL_RADAR_CREDENTIALS_FP}'")
+                raise
+        raise Exception(
+            "Connection Error. Are you connected to the internet?")
+
+    def _api_call(self: Self, header: Dict) -> Dict:
+        response = requests.get(
+            f"https://api.railradar.in/api/v1/trains/{self._train_number}",
+            headers=header
+        )
+        response.raise_for_status()
+        return response.json()
+
+    @staticmethod
+    def _calculate_backoff(attempt: int) -> float:
+        return 2 ** attempt
