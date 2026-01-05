@@ -58,3 +58,7 @@ RAIL_RADAR_CREDENTIALS_FP = Path(
 TICKET_FOLDER = Path.home() / "travels/"
 
 MAX_RETRIES_FOR_NETWORK_REQUESTS = 7
+
+
+def calculate_backoff(attempt: int) -> float:
+    return 2 ** attempt

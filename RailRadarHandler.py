@@ -8,7 +8,7 @@ from requests import HTTPError, RequestException
 
 from FileCache import FileCache
 from Logger import LogLevel, log
-from common import MAX_RETRIES_FOR_NETWORK_REQUESTS, RAIL_RADAR_CREDENTIALS_FP
+from common import MAX_RETRIES_FOR_NETWORK_REQUESTS, RAIL_RADAR_CREDENTIALS_FP, calculate_backoff
 
 
 class RailRadarHandler:
@@ -59,8 +59,8 @@ class RailRadarHandler:
                 raise
             except RequestException:
                 log(LogLevel.Warning,
-                    f"Network error while retrieving RailRadar info. Retrying in {self._calculate_backoff(attempt)} seconds...")
-                time.sleep(self._calculate_backoff(attempt))
+                    f"Network error while retrieving RailRadar info. Retrying in {calculate_backoff(attempt)} seconds...")
+                time.sleep(calculate_backoff(attempt))
             except IOError:
                 log(LogLevel.Warning,
                     f"Couldn't open '{RAIL_RADAR_CREDENTIALS_FP}'")
@@ -79,7 +79,3 @@ class RailRadarHandler:
         )
         response.raise_for_status()
         return response.json()
-
-    @staticmethod
-    def _calculate_backoff(attempt: int) -> float:
-        return 2 ** attempt
