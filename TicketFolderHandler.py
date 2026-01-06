@@ -39,16 +39,24 @@ class TicketFolderHandler(PatternMatchingEventHandler):
             return
 
         try:
-            if self._gsh.calendar.event_exists(ticket.ttc_id):
-                log(LogLevel.Status, "\tFound the event. Not creating it again")
+            if link := self._gsh.calendar.event_exists(ticket.ttc_id):
+                log(LogLevel.Status,
+                    f"\tFound the event at {link}. Not creating it again")
             else:
                 log(LogLevel.Status,
                     f"\tUploading {ticket_fp} to Google Drive")
                 upload_response = self._gsh.drive.upload_pdf(ticket_fp)
 
-                log(LogLevel.Status, f"\tCreating event")
-                self._gsh.calendar.insert_event(ticket.ttc_id, ticket.summary, ticket.from_where,
+                if upload_response:
+                    log(LogLevel.Status,
+                        f"\tUploaded {ticket_fp} to {upload_response.webViewLink}")
+                else:
+                    log(LogLevel.Warning, f"Failure to upload {ticket_fp}")
+
+                log(LogLevel.Status, "\tCreating event")
+                link = self._gsh.calendar.insert_event(ticket.ttc_id, ticket.summary, ticket.from_where,
                                                 ticket.description, upload_response, ticket.departure, ticket.arrival, DEFAULT_REMINDERS, REMINDER_NOTIFICATION_TYPE, DEFAULT_EVENT_COLOR)
+                log(LogLevel.Status, f"\tEvent created at {link}")
             log(LogLevel.Status, f"Finished processing {ticket_fp}")
         except Exception as error:
             log(LogLevel.Error,

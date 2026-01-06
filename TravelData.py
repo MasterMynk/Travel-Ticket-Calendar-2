@@ -21,3 +21,4 @@ class TravelData:
     description: str
     departure: TravelDataField
     arrival: TravelDataField
+    ttc_id: str

@@ -16,7 +16,7 @@ class GCalendar(GService):
         super().__init__(token_fp, "calendar", "v3", credentials, refresh_credentials)
         log(LogLevel.Status, "Done initializing Google Calendar API")
 
-    def insert_event(self: Self, ttc_id: str, summary: str, location: str, description: str, ticket_upload: FileUploadResponse | None, start: datetime, end: datetime, reminders: list[timedelta], reminder_type: ReminderNotificationType, color: CalendarEventColor) -> None:
+    def insert_event(self: Self, ttc_id: str, summary: str, location: str, description: str, ticket_upload: FileUploadResponse | None, start: datetime, end: datetime, reminders: list[timedelta], reminder_type: ReminderNotificationType, color: CalendarEventColor) -> str:
         event_data = {
             "summary": summary,
             "location": location,
@@ -49,7 +49,7 @@ class GCalendar(GService):
                 ticket_upload.gcalendar_format
             ]
 
-        self._perform_gapi_call(
+        return self._perform_gapi_call(
             lambda: self._service.events()
             .insert(
                 calendarId=DEFAULT_CALENDAR_ID,
@@ -57,10 +57,10 @@ class GCalendar(GService):
                 supportsAttachments=ticket_upload is not None
             )
             .execute()
-        )
+        )["htmlLink"]
 
-    def event_exists(self: Self, ttc_id: str) -> bool:
-        return len(self._perform_gapi_call(
+    def event_exists(self: Self, ttc_id: str) -> str | None:
+        found_events = self._perform_gapi_call(
             lambda: self._service.events()
             .list(
                 calendarId=DEFAULT_CALENDAR_ID,
@@ -68,4 +68,7 @@ class GCalendar(GService):
                 singleEvents=True
             )
             .execute()
-        )["items"]) > 0
+        )["items"]
+
+        if len(found_events) > 0:
+            return found_events[0]["htmlLink"]

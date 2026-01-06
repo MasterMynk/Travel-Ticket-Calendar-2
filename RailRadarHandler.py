@@ -30,6 +30,10 @@ class RailRadarHandler:
 
         self.departure_station_marked = False
 
+    @property
+    def is_data_missing(self: Self) -> bool:
+        return None in [self.departure_datetime, self.arrival_datetime, self.departure_station_name, self.arrival_station_name]
+
     def station_codes(self: Self) -> Iterator[Tuple[Any, Callable[[], None]]]:
         for route in self._data:
             yield (route["stationCode"], self.mark_as_arrival_station(route) if self.departure_station_marked else self.mark_as_departure_station(route))
