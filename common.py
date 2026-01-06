@@ -38,10 +38,11 @@ DEFAULT_REMINDERS = [
 DEFAULT_EVENT_COLOR = CalendarEventColor.Banana
 
 IRCTC_REGEX = {
-    "station_info": r"Booked From\n To\n(?P<departure_station_name>.*?) \((?P<departure_station_code>\w{3,4})\).*?\) (?P<arrival_station_name>.*) \((?P<arrival_station_code>\w{3,4})\)\n",
-    "time_info": r"Start Date\* (?P<departure_date>.*?) Departure\* (?P<departure_datetime>.*?) Arrival\* (?P<arrival_datetime>.*?)\n",
+    # "station_info": r"Booked From\n To\n(?P<departure_station_name>.*?) \((?P<departure_station_code>\w{3,4})\).*?\) (?P<arrival_station_name>.*) \((?P<arrival_station_code>\w{3,4})\)\n",
+    # "time_info": r"Start Date\* (?P<departure_date>.*?) Departure\* (?P<departure_datetime>.*?) Arrival\* (?P<arrival_datetime>.*?)\n",
+    "time_info": r"Start Date\* (?P<departure_date>.*?)\s",
     "train_number": r"PNR Train No./Name Class\n\d+ (?P<train_number>\d\d\d\d\d)",
-    "seating": r"CNF/(?P<seating>\w\d{1,2}/\d{1,2}/(?:SIDE )?(?:UPPER|MIDDLE|LOWER))|RLWL"
+    "seating": r"CNF/(?P<seating>\w\d{1,2}/\d{1,2}/(?:SIDE )?(?:UPPER|MIDDLE|LOWER|WINDOW SIDE|NO CHOICE))|RLWL|PQWL"
 }
 
 DATA_MISSING_IRCTC = "N.A."

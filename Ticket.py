@@ -1,6 +1,5 @@
 from datetime import datetime
 from pathlib import Path
-import sys
 from typing import Self
 import re
 
@@ -27,13 +26,16 @@ class Ticket:
             log(LogLevel.Error, "Unimplemented feature. Skipping ticket...")
             raise Exception("Failure to parse ticket.")
 
-    def _process_as_irctc_tkt(self: Self, ticket_data: str) -> TravelData:
+    def _process_as_irctc_tkt(self: Self, ticket_text: str) -> TravelData:
         log(LogLevel.Status, "\tIdentified ticket as IRCTC ticket")
-        data = {}
+        data = {}  # Data extracted from ticket pdf
+        # print("\n\n", "-"*5, self._filepath, "-"*5)
+        # print(ticket_data)
+        # print("-"*10, "\n\n")
 
         # Collect as much data as you can from the ticket itself using regex
         for search_group, pattern in IRCTC_REGEX.items():
-            match = re.search(pattern, ticket_data,
+            match = re.search(pattern, ticket_text,
                               flags=re.DOTALL | re.IGNORECASE)
 
             if match is None:
@@ -42,21 +44,27 @@ class Ticket:
 
             data.update(match.groupdict())
 
-        if data["arrival_datetime"] == DATA_MISSING_IRCTC or data["departure_datetime"] == DATA_MISSING_IRCTC:
-            data["departure_date"] = datetime.strptime(
-                data["departure_date"], IRCTC_DATE_FORMAT)
-            log(LogLevel.Status,
-                f"\tFiguring out missing information for train number {data["train_number"]}")
-            rrh = RailRadarHandler(data["train_number"], data["departure_date"],
-                                   data["departure_station_code"], data["arrival_station_code"])
+        data["departure_date"] = datetime.strptime(
+            data["departure_date"], IRCTC_DATE_FORMAT
+        )
+        log(LogLevel.Status,
+            f"\tFiguring out information for train number: {data["train_number"]} from RailRadar")
+        rrh = RailRadarHandler(data["train_number"], data["departure_date"])
 
-            data["departure_datetime"] = rrh.departure_datetime
-            data["arrival_datetime"] = rrh.arrival_datetime
-        else:
-            data["departure_datetime"] = datetime.strptime(
-                data["departure_datetime"], IRCTC_DATETIME_FORMAT)
-            data["arrival_datetime"] = datetime.strptime(
-                data["arrival_datetime"], IRCTC_DATETIME_FORMAT)
+        for station_code, mark in rrh.station_codes():
+            if ticket_text.count(station_code) > 0:
+                mark()
+
+        # data["departure_datetime"] = rrh.departure_datetime
+        # data["arrival_datetime"] = rrh.arrival_datetime
+
+        # if data["arrival_datetime"] == DATA_MISSING_IRCTC or data["departure_datetime"] == DATA_MISSING_IRCTC:
+        # pass
+        # else:
+        #     data["departure_datetime"] = datetime.strptime(
+        #         data["departure_datetime"], IRCTC_DATETIME_FORMAT)
+        #     data["arrival_datetime"] = datetime.strptime(
+        #         data["arrival_datetime"], IRCTC_DATETIME_FORMAT)
 
         return TravelData(
             TravelType.Train,
@@ -64,12 +72,12 @@ class Ticket:
             if data["seating"] is not None
             else "",
             departure=TravelDataField(
-                data["departure_station_name"],
-                data["departure_datetime"]
+                rrh.departure_station_name,
+                rrh.departure_datetime
             ),
             arrival=TravelDataField(
-                data["arrival_station_name"],
-                data["arrival_datetime"]
+                rrh.arrival_station_name,
+                rrh.arrival_datetime
             ),
         )
 
