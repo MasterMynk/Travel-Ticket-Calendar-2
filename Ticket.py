@@ -1,6 +1,6 @@
 from datetime import datetime
 from pathlib import Path
-from typing import Dict, Self
+from typing import Self
 import re
 
 from pypdf import PdfReader
@@ -8,7 +8,7 @@ from pypdf import PdfReader
 from Logger import LogLevel, log
 from RailRadarHandler import RailRadarHandler
 from TravelData import TravelData, TravelDataField, TravelType
-from common import IRCTC_DATE_FORMAT, IRCTC_DATETIME_FORMAT, DATA_MISSING_IRCTC
+from common import IRCTC_DATE_FORMAT
 
 
 class Ticket:
@@ -56,7 +56,7 @@ class Ticket:
             ttc_id=data["pnr"],
         )
 
-    def _extract_data_from_irctc_ticket(self: Self, ticket_text: str) -> Dict:
+    def _extract_data_from_irctc_ticket(self: Self, ticket_text: str) -> dict:
         # Collecting:
         # 1. Date of departure
         # 2. PNR number for generating TTC ID
@@ -88,7 +88,7 @@ class Ticket:
         return data
 
     @staticmethod
-    def _get_rrh_stations_marked(data: Dict, ticket_text: str) -> RailRadarHandler:
+    def _get_rrh_stations_marked(data: dict, ticket_text: str) -> RailRadarHandler:
         rrh = RailRadarHandler(data["train_number"], data["departure_date"])
 
         # Strip off any part of the text where we know the station code won't be present to make the search more efficient
@@ -100,9 +100,9 @@ class Ticket:
         else:
             code_extract = code_extract.group(1)
 
-        for station_code, mark in rrh.station_codes():
+        for code, mark in rrh.station_codes():
             code_match = re.search(
-                f"{r"\W"}{station_code}{r"\W"}", code_extract)
+                f"{r"\W"}{code}{r"\W"}", code_extract)
             if code_match is not None:
                 # This will be set while marking the departure station
                 # That way we won't be searching the part of the extract that we know contains the departure station code anyways

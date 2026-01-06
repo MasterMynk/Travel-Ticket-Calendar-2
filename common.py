@@ -37,10 +37,7 @@ DEFAULT_REMINDERS = [
 ]
 DEFAULT_EVENT_COLOR = CalendarEventColor.Banana
 
-DATA_MISSING_IRCTC = "N.A."
-
 IRCTC_DATE_FORMAT = "%d-%b-%Y"
-IRCTC_DATETIME_FORMAT = "%H:%M %d-%b-%Y"
 
 CACHE_FOLDER = Path.home() / ".cache/Travel Ticket Calendar/"
 REFRESH_TIME = timedelta(weeks=1)

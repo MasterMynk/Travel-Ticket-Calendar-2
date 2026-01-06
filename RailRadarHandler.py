@@ -2,7 +2,7 @@ from collections.abc import Iterator
 from datetime import datetime, timedelta
 import json
 import time
-from typing import Any, Callable, Dict, Self, Tuple
+from typing import Any, Callable, Self, TypedDict
 
 import requests
 from requests import HTTPError, RequestException
@@ -10,6 +10,14 @@ from requests import HTTPError, RequestException
 from FileCache import FileCache
 from Logger import LogLevel, log
 from common import MAX_RETRIES_FOR_NETWORK_REQUESTS, RAIL_RADAR_CREDENTIALS_FP, calculate_backoff
+
+
+class Station(TypedDict):
+    day: int
+    departure: int
+    arrival: int
+    code: str
+    name: str
 
 
 class RailRadarHandler:
@@ -34,48 +42,48 @@ class RailRadarHandler:
     def is_data_missing(self: Self) -> bool:
         return None in [self.departure_datetime, self.arrival_datetime, self.departure_station_name, self.arrival_station_name]
 
-    def station_codes(self: Self) -> Iterator[Tuple[Any, Callable[[], None]]]:
-        for route in self._data:
-            yield (route["stationCode"], self.mark_as_arrival_station(route) if self.departure_station_marked else self.mark_as_departure_station(route))
+    def station_codes(self: Self) -> Iterator[tuple[str, Callable[[], None]]]:
+        for station in self._data:
+            yield (station["code"], self.mark_as_arrival_station(station) if self.departure_station_marked else self.mark_as_departure_station(station))
 
-    def mark_as_departure_station(self: Self, route: Any) -> Callable[[], None]:
+    def mark_as_departure_station(self: Self, station: Station) -> Callable[[], None]:
         def impl() -> None:
-            minute_of_departure = int(route["scheduledDeparture"])
-            self._day_of_departure = int(route["day"])
+            minute_of_departure = int(station["departure"])
+            self._day_of_departure = int(station["day"])
 
             self.departure_datetime = self._departure_date + \
                 timedelta(minutes=minute_of_departure)
-            self.departure_station_name = route["stationName"]
+            self.departure_station_name = station["name"]
             self.departure_station_marked = True
 
         return impl
 
-    def mark_as_arrival_station(self: Self, route: Any) -> Callable[[], None]:
+    def mark_as_arrival_station(self: Self, station: Station) -> Callable[[], None]:
         def impl() -> None:
-            minute_of_arrival = int(route["scheduledArrival"])
-            days_of_travel = int(route["day"]) - self._day_of_departure
+            minute_of_arrival = int(station["arrival"])
+            days_of_travel = int(station["day"]) - self._day_of_departure
 
             self.arrival_datetime = self._departure_date + \
                 timedelta(days=days_of_travel, minutes=minute_of_arrival)
-            self.arrival_station_name = route["stationName"]
+            self.arrival_station_name = station["name"]
 
         return impl
 
-    def _get_train_info(self: Self) -> Any:
+    def _get_train_info(self: Self) -> list[Station]:
         for attempt in range(MAX_RETRIES_FOR_NETWORK_REQUESTS):
             try:
                 with open(RAIL_RADAR_CREDENTIALS_FP, "r") as credentials_json:
                     # Returning a list containing dictionaries representing all the stations the train stops at with only the required fields to save data
                     return [
                         {
-                            "day": route["day"],
-                            "scheduledDeparture": route.get("scheduledDeparture", 0),
-                            "scheduledArrival": route.get("scheduledArrival", 0),
-                            "stationCode": route["stationCode"],
-                            "stationName": route["stationName"],
+                            "day": station["day"],
+                            "departure": station.get("scheduledDeparture", 0),
+                            "arrival": station.get("scheduledArrival", 0),
+                            "code": station["stationCode"],
+                            "name": station["stationName"],
                         }
-                        for route in self._api_call(json.loads(credentials_json.read()))["data"]["route"]
-                        if route["isHalt"] == 1
+                        for station in self._api_call(json.loads(credentials_json.read()))["data"]["route"]
+                        if station["isHalt"] == 1
                     ]
             except FileNotFoundError:
                 log(LogLevel.Warning,
@@ -98,7 +106,7 @@ class RailRadarHandler:
         raise Exception(
             "Connection Error. Are you connected to the internet?")
 
-    def _api_call(self: Self, header: Dict) -> Dict:
+    def _api_call(self: Self, header: dict) -> dict:
         log(LogLevel.Status, f"\t\tPerforming API call to RailRadar")
 
         response = requests.get(
