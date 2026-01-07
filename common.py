@@ -52,7 +52,7 @@ MAX_RETRIES_FOR_NETWORK_REQUESTS = 7
 FILE_TRANSFER_TIMEOUT = 10  # seconds
 FILE_TRANSFER_POLLING_INTERVAL = 0.25  # sconds
 
-AI_MODEL = "gemini-2.5-flash"
+AI_MODEL = "gemini-2.5-flash-lite"
 
 def calculate_backoff(attempt: int) -> float:
     return 2 ** attempt

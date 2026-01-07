@@ -1,11 +1,13 @@
 import json
 from pathlib import Path
-import sys
+import time
 from typing import Self
+
 from google import genai
+from google.api_core import exceptions
 
 from Logger import LogLevel, log
-from common import AI_MODEL, MODEL_CREDENTIALS_FP
+from common import AI_MODEL, MAX_RETRIES_FOR_NETWORK_REQUESTS, MODEL_CREDENTIALS_FP, calculate_backoff
 
 
 class Model:
@@ -33,18 +35,37 @@ class Model:
             self._client = self._get_client(MODEL_CREDENTIALS_FP)
 
         log(LogLevel.Status, f"Asking {AI_MODEL} for help")
-        response = self._client.models.generate_content(
-            model=AI_MODEL,
-            contents=[
-                genai.types.Part.from_bytes(
-                    data=ticket_fp.read_bytes(),
-                    mime_type="application/pdf"
-                ),
-                prompt
-            ],
-            config=genai.types.GenerateContentConfig(temperature=0.1)
-        )
-        if response.text is None:
-            sys.exit(-1)
 
-        return response.text
+        for attempt in range(MAX_RETRIES_FOR_NETWORK_REQUESTS):
+            try:
+                response = self._client.models.generate_content(
+                    model=AI_MODEL,
+                    contents=[
+                        genai.types.Part.from_bytes(
+                            data=ticket_fp.read_bytes(),
+                            mime_type="application/pdf"
+                        ),
+                        prompt
+                    ],
+                    config=genai.types.GenerateContentConfig(temperature=0.1)
+                )
+
+                if response.text is None:
+                    raise Exception("Response was obtained as None")
+
+                return response.text
+            except exceptions.ResourceExhausted as error:
+                log(LogLevel.Warning, f"API quota exhausted: {error}")
+
+            except exceptions.GoogleAPIError as error:
+                log(LogLevel.Warning, f"Google API Error: {error}")
+
+            except Exception as error:
+                log(LogLevel.Warning, f"Some error occured: {error}")
+
+            log(LogLevel.Status,
+                f"Retrying in {calculate_backoff(attempt)} seconds")
+            time.sleep(calculate_backoff(attempt))
+
+        raise Exception(
+            f"Failure to parse ticket from AI Model after {MAX_RETRIES_FOR_NETWORK_REQUESTS} retries")
