@@ -49,6 +49,8 @@ MODEL_CREDENTIALS_FP = Path(__file__).parent / "gemini_credentials.json"
 TICKET_FOLDER = Path.home() / "travels/"
 
 MAX_RETRIES_FOR_NETWORK_REQUESTS = 7
+FILE_TRANSFER_TIMEOUT = 10  # seconds
+FILE_TRANSFER_POLLING_INTERVAL = 0.25  # sconds
 
 AI_MODEL = "gemini-2.5-flash"
 
