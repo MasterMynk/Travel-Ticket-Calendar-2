@@ -1,10 +1,12 @@
 from datetime import datetime
+import json
 from pathlib import Path
 from typing import Self
 import re
 
 from pypdf import PdfReader
 
+from AiModelHandler import Model
 from Logger import LogLevel, log
 from RailRadarHandler import RailRadarHandler
 from TravelData import TravelData, TravelDataField, TravelType
@@ -12,20 +14,21 @@ from common import IRCTC_DATE_FORMAT
 
 
 class Ticket:
-    def __init__(self: Self, filepath: Path) -> None:
+    def __init__(self: Self, filepath: Path, model: Model) -> None:
         self._filepath = filepath
+        self._model = model
 
         log(LogLevel.Status, "\tExtracting Ticket text")
         with PdfReader(self._filepath) as pdf:
-            ticket_data = pdf.pages[0].extract_text()
+            ticket_text = pdf.pages[0].extract_text()
 
-        if ticket_data.find("IRCTC") != -1:
+        if ticket_text.find("IRCTC") != -1:
             log(LogLevel.Status, "\tIdentified ticket as IRCTC ticket")
-            self._data = self._process_as_irctc_tkt(ticket_data)
+            self._data = self._process_as_irctc_tkt(ticket_text)
         else:
-            log(LogLevel.Error, "Couldn't identify the type of ticket to parse.")
-            log(LogLevel.Error, "Unimplemented feature. Skipping ticket...")
-            raise Exception("Failure to parse ticket.")
+            log(LogLevel.Status,
+                "Couldn't identify the type of ticket to parse. Parsing with AI Model.")
+            self._data = self._process_with_ai_model()
 
     def _process_as_irctc_tkt(self: Self, ticket_text: str) -> TravelData:
         data = self._extract_data_from_irctc_ticket(ticket_text)
@@ -111,6 +114,63 @@ class Ticket:
                     break  # After arrival station marked we break
 
         return rrh
+
+    def _process_with_ai_model(self: Self) -> TravelData:
+        TICKET_EXTRACTION_PROMPT = """
+Analyze this travel ticket (flight/train/bus) and extract information in valid JSON format.
+
+CRITICAL REQUIREMENTS:
+1. All datetime values MUST be in ISO 8601 format (YYYY-MM-DDTHH:MM:SS)
+2. If year is missing, use """ + f"{datetime.now().year}" + """ as default
+3. Return ONLY valid JSON, no markdown formatting or code blocks
+4. The "description" field must be a string containing different pieces of on new lines
+5. If the ticket is for multiple passengers simply consider it being for the first passenger name that appears
+
+REQUIRED FIELDS:
+{
+  "departure": {
+    "when": "ISO datetime string",
+    "where": "Full location with terminal/platform/gate if available"
+  },
+  "arrival": {
+    "when": "ISO datetime string", 
+    "where": "Full location with terminal/platform/gate if available"
+  },
+  "ttc_id": "PNR/Booking Reference/Confirmation Number with PNR having the highest priority",
+  "travel_type": "Flight|Train|Bus",
+  "description": "airline/railway/bus company name\\nflight/train number\\nseat/coach/berth number if available",
+}
+
+LOCATION FORMATTING RULES:
+- For airports: Include city and terminal depending on what is available (e.g., "Delhi Airport, Terminal 1D")
+- For trains: Include station name and platform if available (e.g., "New Delhi Railway Station, Platform 5")
+- For buses: Include station/terminal name
+- Always use the full official name when possible
+
+EXTRACTION STRATEGY:
+1. First identify the transport type (flight/train/bus)
+2. Look for PNR/booking reference prominently displayed
+3. Extract departure/arrival times - they're usually in 24-hour format
+"""
+        response = self._model.parse(
+            self._filepath, TICKET_EXTRACTION_PROMPT)
+
+        if "```json" in response:
+            response = response.split(
+                "```json")[1].split("```")[0]
+        response = json.loads(response)
+
+        for key in ["departure", "arrival"]:
+            response[key]["when"] = datetime.fromisoformat(
+                response[key]["when"])
+
+        return TravelData(
+            TravelType[response["travel_type"]],
+            response["description"],
+            TravelDataField(**response["departure"]),
+            TravelDataField(**response["arrival"]),
+            response["ttc_id"]
+        )
 
     @property
     def ttc_id(self: Self) -> str:

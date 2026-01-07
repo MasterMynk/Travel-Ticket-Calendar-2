@@ -44,11 +44,13 @@ REFRESH_TIME = timedelta(weeks=1)
 
 RAIL_RADAR_CREDENTIALS_FP = Path(
     __file__).parent / "rail_radar_credentials.json"
+MODEL_CREDENTIALS_FP = Path(__file__).parent / "gemini_credentials.json"
 
 TICKET_FOLDER = Path.home() / "travels/"
 
 MAX_RETRIES_FOR_NETWORK_REQUESTS = 7
 
+AI_MODEL = "gemini-2.5-flash"
 
 def calculate_backoff(attempt: int) -> float:
     return 2 ** attempt

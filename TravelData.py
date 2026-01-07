@@ -13,6 +13,7 @@ class TravelDataField:
 class TravelType(IntEnum):
     Train = auto()
     Flight = auto()
+    Bus = auto()
 
 
 @dataclass

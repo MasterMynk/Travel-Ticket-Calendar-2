@@ -3,6 +3,7 @@ import sys
 from typing import Self
 from watchdog.events import DirCreatedEvent, FileCreatedEvent,  PatternMatchingEventHandler
 
+from AiModelHandler import Model
 from GServicesHandler import GServicesHandler
 from Logger import LogLevel, log
 from Ticket import Ticket
@@ -20,6 +21,8 @@ class TicketFolderHandler(PatternMatchingEventHandler):
                 f"Unhandled exception {error} while initializing Google APIs. Exiting...")
             sys.exit(-1)
 
+        self._model = Model()
+
         for ticket_fp in monitored_fp.glob("*.pdf"):
             self._process_ticket(ticket_fp)
 
@@ -29,8 +32,9 @@ class TicketFolderHandler(PatternMatchingEventHandler):
 
     def _process_ticket(self: Self, ticket_fp: Path) -> None:
         log(LogLevel.Status, f"Processing {ticket_fp}")
+
         try:
-            ticket = Ticket(ticket_fp)
+            ticket = Ticket(ticket_fp, self._model)
         except Exception as error:
             log(LogLevel.Error,
                 f"Failure to parse ticket: {error}")
@@ -55,7 +59,7 @@ class TicketFolderHandler(PatternMatchingEventHandler):
 
                 log(LogLevel.Status, "\tCreating event")
                 link = self._gsh.calendar.insert_event(ticket.ttc_id, ticket.summary, ticket.from_where,
-                                                ticket.description, upload_response, ticket.departure, ticket.arrival, DEFAULT_REMINDERS, REMINDER_NOTIFICATION_TYPE, DEFAULT_EVENT_COLOR)
+                                                       ticket.description, upload_response, ticket.departure, ticket.arrival, DEFAULT_REMINDERS, REMINDER_NOTIFICATION_TYPE, DEFAULT_EVENT_COLOR)
                 log(LogLevel.Status, f"\tEvent created at {link}")
             log(LogLevel.Status, f"Finished processing {ticket_fp}")
         except Exception as error:
