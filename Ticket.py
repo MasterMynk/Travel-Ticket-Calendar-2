@@ -95,27 +95,21 @@ class Ticket:
         code_extract = re.search(
             r"Booked From\s+To\s+(.*?)Start Date", ticket_text, re.DOTALL | re.IGNORECASE)
 
-        if code_extract is None:
-            code_extract = ticket_text
-        else:
-            code_extract = code_extract.group(1)
+        code_extract = ticket_text if code_extract is None else code_extract.group(
+            1)
 
         for code, mark in rrh.station_codes():
             code_match = re.search(
                 f"{r"\W"}{code}{r"\W"}", code_extract)
             if code_match is not None:
-                # This will be set while marking the departure station
+                # This will shorten the search string when departure station code is found
                 # That way we won't be searching the part of the extract that we know contains the departure station code anyways
                 code_extract = code_extract[code_match.end():]
 
-                if rrh.departure_station_marked:
-                    # If we've reached here means we've already marked the departure station before
-                    # The following mark call will mark the arrival station hence we're done
-                    mark()
-                    break
-                else:
-                    # Marking the departure station
-                    mark()
+                mark()  # First departure station is marked, then arrival station
+                if not rrh.departure_station_marked:
+                    break  # After arrival station marked we break
+
         return rrh
 
     @property

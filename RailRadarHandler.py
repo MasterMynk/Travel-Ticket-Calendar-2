@@ -66,6 +66,7 @@ class RailRadarHandler:
             self.arrival_datetime = self._departure_date + \
                 timedelta(days=days_of_travel, minutes=minute_of_arrival)
             self.arrival_station_name = station["name"]
+            self.departure_station_marked = False
 
         return impl
 
