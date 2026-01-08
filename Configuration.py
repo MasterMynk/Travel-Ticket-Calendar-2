@@ -17,8 +17,8 @@ class TimedeltaDict(TypedDict):
 class ConfigurationDict(TypedDict, total=False):
     # This is what we will get on parsing config.toml
 
-    google_api_credentials_json: str
-    google_api_token_json: str
+    gapi_credentials_json: str
+    gapi_token_json: str
     rail_radar_credentials_json: str
     ai_model_credentials_json: str
 
@@ -43,8 +43,8 @@ class ConfigurationDict(TypedDict, total=False):
 # This is what the consumers of this module will use
 @dataclass
 class Configuration:
-    google_api_credentials_json: Path
-    google_api_token_json: Path
+    gapi_credentials_json: Path
+    gapi_token_json: Path
     rail_radar_credentials_json: Path
     ai_model_credentials_json: Path
 
@@ -120,7 +120,7 @@ class Configuration:
 
                 else:
                     log(LogLevel.Warning,
-                        f"This key '{key}' must not be storing a data type of string. Please check documentation.")
+                        f"This key '{key}' must not be storing a data type of string or is invalid. Please check documentation.")
 
             elif type(value) is dict and cls._is_valid_timedeltadict(value):
                 setter(cls._timedeltadict_to_timedelta(
@@ -134,8 +134,8 @@ class Configuration:
 
 
 DEFAULT_CONFIG = Configuration(
-    google_api_credentials_json=Path(__file__).parent / "credentials.json",
-    google_api_token_json=Path(__file__).parent / "token.json",
+    gapi_credentials_json=Path(__file__).parent / "credentials.json",
+    gapi_token_json=Path(__file__).parent / "token.json",
     calendar_id="primary",
     reminder_notification_type=ReminderNotificationType.popup,
     reminders=[
