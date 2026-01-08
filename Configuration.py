@@ -101,7 +101,7 @@ class Configuration:
                     setter(
                         [cls._timedeltadict_to_timedelta(val) for val in value if cls._is_valid_timedeltadict(val)], False)
                     log(LogLevel.Status,
-                        f"Configured {key} -> {[str(val) for val in config_attr]}")
+                        f"\tConfigured {key} -> {[str(val) for val in config_attr]}")
                 else:
                     setter(value)
 
@@ -109,7 +109,7 @@ class Configuration:
                 if isinstance(config_attr, Path):
                     setter(Path(value))
 
-                if isinstance(config_attr, Enum):
+                elif isinstance(config_attr, Enum):
                     if hasattr(type(config_attr), value):
                         setter(type(config_attr)[value])
                     else:
@@ -117,6 +117,10 @@ class Configuration:
                             f"Invalid value {value} for {key}. {key} can only take values: {", ".join([val.name for val in type(config_attr)])}")
                         log(LogLevel.Status,
                             f"Using default value: {config_attr.name}")
+
+                else:
+                    log(LogLevel.Warning,
+                        f"This key '{key}' must not be storing a data type of string. Please check documentation.")
 
             elif type(value) is dict and cls._is_valid_timedeltadict(value):
                 setter(cls._timedeltadict_to_timedelta(
