@@ -11,13 +11,13 @@ from google.auth.exceptions import RefreshError
 from google.oauth2.credentials import Credentials
 from google.auth import external_account_authorized_user
 
+from Configuration import Configuration
 from Logger import LogLevel, log
-from common import MAX_RETRIES_FOR_NETWORK_REQUESTS, calculate_backoff
+from common import calculate_backoff
 
 
 class GService:
-    def __init__(self: Self, token_fp: Path, api_name: str, api_version: str, credentials: Credentials | external_account_authorized_user.Credentials, refresh_credentials: Callable) -> None:
-        self._token_fp = token_fp
+    def __init__(self: Self, api_name: str, api_version: str, credentials: Credentials | external_account_authorized_user.Credentials, refresh_credentials: Callable[[Configuration], None]) -> None:
         self._api_name = api_name
         self._api_version = api_version
         self._service = self._build_service(credentials)
@@ -56,15 +56,15 @@ class GService:
     def _handle_event_error(error: Exception) -> None:
         print(f"Failed to create event: {error}")
 
-    def _handle_refresh_error(self: Self, error: RefreshError) -> None:
+    def _handle_refresh_error(self: Self, error: RefreshError, config: Configuration) -> None:
         log(LogLevel.Error,
             f"Permissions revoked from Google's side {error}. Trying to sign you in again.")
-        self._refresh_credentials()
+        self._refresh_credentials(config)
 
     T = TypeVar("T")
 
-    def _perform_gapi_call(self: Self, fn: Callable[[], T]) -> T:
-        for attempt in range(MAX_RETRIES_FOR_NETWORK_REQUESTS):
+    def _perform_gapi_call(self: Self, fn: Callable[[], T], config: Configuration) -> T:
+        for attempt in range(config.max_retries_for_network_requests):
             try:
                 return fn()
             except HttpError as error:
@@ -72,7 +72,7 @@ class GService:
             except ServerNotFoundError as error:
                 self._handle_server_not_found_error(error)
             except RefreshError as error:
-                self._handle_refresh_error(error)
+                self._handle_refresh_error(error, config)
             except Exception as error:
                 self._handle_event_error(error)
             log(LogLevel.Status,

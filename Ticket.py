@@ -7,16 +7,15 @@ import re
 from pypdf import PdfReader
 
 from AiModelHandler import Model
+from Configuration import Configuration
 from Logger import LogLevel, log
 from RailRadarHandler import RailRadarHandler
 from TravelData import TravelData, TravelDataField, TravelType
-from common import IRCTC_DATE_FORMAT
 
 
 class Ticket:
-    def __init__(self: Self, filepath: Path, model: Model) -> None:
+    def __init__(self: Self, filepath: Path, model: Model, config: Configuration) -> None:
         self._filepath = filepath
-        self._model = model
 
         log(LogLevel.Status, "\tExtracting Ticket text")
         with PdfReader(self._filepath) as pdf:
@@ -24,19 +23,21 @@ class Ticket:
 
         if ticket_text.find("IRCTC") != -1:
             log(LogLevel.Status, "\tIdentified ticket as IRCTC ticket")
-            self._data = self._process_as_irctc_tkt(ticket_text)
+            self._data = self._process_as_irctc_tkt(ticket_text, config)
         else:
             log(LogLevel.Status,
                 "Couldn't identify the type of ticket to parse. Parsing with AI Model.")
-            self._data = self._process_with_ai_model()
+            self._data = self._process_with_ai_model(
+                self._filepath, model, config)
 
-    def _process_as_irctc_tkt(self: Self, ticket_text: str) -> TravelData:
-        data = self._extract_data_from_irctc_ticket(ticket_text)
+    def _process_as_irctc_tkt(self: Self, ticket_text: str, config: Configuration) -> TravelData:
+        data = self._extract_data_from_irctc_ticket(
+            self._filepath, ticket_text)
 
         log(LogLevel.Status,
             f"\tFiguring out information for train number: {data["train_number"]} from RailRadar")
 
-        rrh = self._get_rrh_stations_marked(data, ticket_text)
+        rrh = self._get_rrh_stations_marked(data, ticket_text, config)
 
         if rrh.is_data_missing:
             raise Exception(
@@ -59,7 +60,8 @@ class Ticket:
             ttc_id=data["pnr"],
         )
 
-    def _extract_data_from_irctc_ticket(self: Self, ticket_text: str) -> dict:
+    @staticmethod
+    def _extract_data_from_irctc_ticket(ticket_fp: Path, ticket_text: str) -> dict:
         # Collecting:
         # 1. Date of departure
         # 2. PNR number for generating TTC ID
@@ -71,6 +73,8 @@ class Ticket:
             r"PNR Train No./Name Class\n(?P<pnr>\d+) (?P<train_number>\d\d\d\d\d)",
             r"CNF/(?P<seating>\w\d{1,2}/\d{1,2}/(?:SIDE )?(?:UPPER|MIDDLE|LOWER|WINDOW SIDE|NO CHOICE))|RLWL|PQWL",
         ]
+        IRCTC_DATE_FORMAT = "%d-%b-%Y"
+
 
         data = {}
         for i, pattern in enumerate(PATTERNS, 1):
@@ -79,7 +83,7 @@ class Ticket:
 
             if match is None:
                 raise Exception(
-                    f"IRCTC ticket.\nCouldn't find something in pattern no.: {i} search group from IRCTC ticket {self._filepath}")
+                    f"IRCTC ticket.\nCouldn't find something in pattern no.: {i} search group from IRCTC ticket {ticket_fp}")
 
             data.update(match.groupdict())
         data["departure_date"] = datetime.strptime(
@@ -91,8 +95,9 @@ class Ticket:
         return data
 
     @staticmethod
-    def _get_rrh_stations_marked(data: dict, ticket_text: str) -> RailRadarHandler:
-        rrh = RailRadarHandler(data["train_number"], data["departure_date"])
+    def _get_rrh_stations_marked(data: dict, ticket_text: str, config: Configuration) -> RailRadarHandler:
+        rrh = RailRadarHandler(
+            data["train_number"], data["departure_date"], config)
 
         # Strip off any part of the text where we know the station code won't be present to make the search more efficient
         code_extract = re.search(
@@ -115,7 +120,8 @@ class Ticket:
 
         return rrh
 
-    def _process_with_ai_model(self: Self) -> TravelData:
+    @staticmethod
+    def _process_with_ai_model(ticket_fp: Path, model: Model, config: Configuration) -> TravelData:
         TICKET_EXTRACTION_PROMPT = """
 Analyze this travel ticket (flight/train/bus) and extract information in valid JSON format.
 
@@ -152,8 +158,7 @@ EXTRACTION STRATEGY:
 2. Look for PNR/booking reference prominently displayed
 3. Extract departure/arrival times - they're usually in 24-hour format
 """
-        response = self._model.parse(
-            self._filepath, TICKET_EXTRACTION_PROMPT)
+        response = model.parse(ticket_fp, TICKET_EXTRACTION_PROMPT, config)
 
         if "```json" in response:
             response = response.split(

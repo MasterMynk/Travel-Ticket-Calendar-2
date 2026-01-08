@@ -2,11 +2,11 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Callable, Self
 
-from googleapiclient.discovery import build
 from google.oauth2.credentials import Credentials
 from google.auth import external_account_authorized_user
 from googleapiclient.http import MediaFileUpload
 
+from Configuration import Configuration
 from GService import GService
 
 from Logger import log, LogLevel
@@ -29,11 +29,11 @@ class FileUploadResponse:
 
 
 class GDrive(GService):
-    def __init__(self: Self, token_fp: Path, credentials: Credentials | external_account_authorized_user.Credentials, refresh_credentials: Callable) -> None:
-        super().__init__(token_fp, "drive", "v3", credentials, refresh_credentials)
+    def __init__(self: Self, config: Configuration, credentials: Credentials | external_account_authorized_user.Credentials, refresh_credentials: Callable) -> None:
+        super().__init__("drive", "v3", credentials, refresh_credentials)
         log(LogLevel.Status, "Done initializing Google Drive API")
 
-    def upload_pdf(self: Self, path: Path) -> FileUploadResponse | None:
+    def upload_pdf(self: Self, path: Path, config: Configuration) -> FileUploadResponse | None:
         try:
             return FileUploadResponse(
                 **self._perform_gapi_call(
@@ -47,7 +47,7 @@ class GDrive(GService):
                             resumable=True
                         ),
                         fields="id,name,webViewLink,mimeType"
-                    ).execute()
+                    ).execute(), config
                 )
             )
         except:

@@ -7,9 +7,10 @@ from typing import Any, Callable, Self, TypedDict
 import requests
 from requests import HTTPError, RequestException
 
+from Configuration import Configuration
 from FileCache import FileCache
 from Logger import LogLevel, log
-from common import MAX_RETRIES_FOR_NETWORK_REQUESTS, RAIL_RADAR_CREDENTIALS_FP, calculate_backoff
+from common import calculate_backoff
 
 
 class Station(TypedDict):
@@ -21,11 +22,11 @@ class Station(TypedDict):
 
 
 class RailRadarHandler:
-    def __init__(self: Self, train_number: str, departure_date: datetime) -> None:
+    def __init__(self: Self, train_number: str, departure_date: datetime, config: Configuration) -> None:
         self.train_number = train_number
 
         self._data = FileCache(
-            self.train_number, self._get_train_info, json.dumps, json.loads).data
+            self.train_number, self._get_train_info, json.dumps, json.loads, config).data
 
         self._departure_date = departure_date
         self._day_of_departure = 0  # Day of the journey when reaching the boarding station
@@ -70,10 +71,10 @@ class RailRadarHandler:
 
         return impl
 
-    def _get_train_info(self: Self) -> list[Station]:
-        for attempt in range(MAX_RETRIES_FOR_NETWORK_REQUESTS):
+    def _get_train_info(self: Self, config: Configuration) -> list[Station]:
+        for attempt in range(config.max_retries_for_network_requests):
             try:
-                with open(RAIL_RADAR_CREDENTIALS_FP, "r") as credentials_json:
+                with open(config.rail_radar_credentials_json, "r") as credentials_json:
                     # Returning a list containing dictionaries representing all the stations the train stops at with only the required fields to save data
                     return [
                         {
@@ -83,12 +84,12 @@ class RailRadarHandler:
                             "code": station["stationCode"],
                             "name": station["stationName"],
                         }
-                        for station in self._api_call(json.loads(credentials_json.read()))["data"]["route"]
+                        for station in self._api_call(self.train_number, json.loads(credentials_json.read()))["data"]["route"]
                         if station["isHalt"] == 1
                     ]
             except FileNotFoundError:
                 log(LogLevel.Warning,
-                    f"'{RAIL_RADAR_CREDENTIALS_FP}' doesn't exist")
+                    f"'{config.rail_radar_credentials_json}' doesn't exist")
                 raise
             except HTTPError:
                 raise
@@ -98,20 +99,21 @@ class RailRadarHandler:
                 time.sleep(calculate_backoff(attempt))
             except IOError:
                 log(LogLevel.Warning,
-                    f"Couldn't open '{RAIL_RADAR_CREDENTIALS_FP}'")
+                    f"Couldn't open '{config.rail_radar_credentials_json}'")
                 raise
             except json.JSONDecodeError:
                 log(LogLevel.Warning,
-                    f"Unable to parse '{RAIL_RADAR_CREDENTIALS_FP}'")
+                    f"Unable to parse '{config.rail_radar_credentials_json}'")
                 raise
         raise Exception(
             "Connection Error. Are you connected to the internet?")
 
-    def _api_call(self: Self, header: dict) -> dict:
+    @staticmethod
+    def _api_call(train_number: str, header: dict) -> dict:
         log(LogLevel.Status, f"\t\tPerforming API call to RailRadar")
 
         response = requests.get(
-            f"https://api.railradar.in/api/v1/trains/{self.train_number}",
+            f"https://api.railradar.in/api/v1/trains/{train_number}",
             headers=header
         )
         response.raise_for_status()

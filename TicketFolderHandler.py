@@ -5,18 +5,20 @@ from typing import Self
 from watchdog.events import DirCreatedEvent, FileCreatedEvent,  PatternMatchingEventHandler
 
 from AiModelHandler import Model
+from Configuration import Configuration
+from ConfigurationHandler import _ConfigurationHandler
 from GServicesHandler import GServicesHandler
 from Logger import LogLevel, log
 from Ticket import Ticket
-from common import FILE_TRANSFER_POLLING_INTERVAL, FILE_TRANSFER_TIMEOUT, GOOGLE_CREDENTIALS_FP, GOOGLE_TOKEN_FP, DEFAULT_REMINDERS, REMINDER_NOTIFICATION_TYPE, DEFAULT_EVENT_COLOR
 
 
 class TicketFolderHandler(PatternMatchingEventHandler):
-    def __init__(self: Self, monitored_fp: Path) -> None:
+    def __init__(self: Self, config_handler: _ConfigurationHandler) -> None:
         super().__init__(patterns=["*.pdf"], ignore_directories=True)
+        self.config = config_handler.config
+
         try:
-            self._gsh = GServicesHandler(
-                GOOGLE_CREDENTIALS_FP, GOOGLE_TOKEN_FP)
+            self._gsh = GServicesHandler(self.config)
         except Exception as error:
             log(LogLevel.Error,
                 f"Unhandled exception {error} while initializing Google APIs. Exiting...")
@@ -24,23 +26,26 @@ class TicketFolderHandler(PatternMatchingEventHandler):
 
         self._model = Model()
 
-        for ticket_fp in monitored_fp.glob("*.pdf"):
-            self._process_ticket(ticket_fp)
+        for ticket_fp in self.config.ticket_folder.glob("*.pdf"):
+            self._process_ticket(ticket_fp, self._gsh,
+                                 self._model, self.config)
 
     def on_created(self: Self, event: DirCreatedEvent | FileCreatedEvent) -> None:
         if isinstance(event.src_path, str):
             ticket_fp = Path(event.src_path)
-            if self._wait_for_transfer_completion(ticket_fp):
-                self._process_ticket(ticket_fp)
+            if self._wait_for_transfer_completion(ticket_fp, self.config):
+                self._process_ticket(ticket_fp, self._gsh,
+                                     self._model, self.config)
             else:
                 log(LogLevel.Warning,
                     f"Timeout reached but file transfer not complete. Skipping ticket '{ticket_fp}'...")
 
-    def _process_ticket(self: Self, ticket_fp: Path) -> None:
+    @staticmethod
+    def _process_ticket(ticket_fp: Path, gsh: GServicesHandler, model: Model, config: Configuration) -> None:
         log(LogLevel.Status, f"Processing {ticket_fp}")
 
         try:
-            ticket = Ticket(ticket_fp, self._model)
+            ticket = Ticket(ticket_fp, model, config)
         except Exception as error:
             log(LogLevel.Error,
                 f"Failure to parse ticket: {error}")
@@ -49,13 +54,13 @@ class TicketFolderHandler(PatternMatchingEventHandler):
             return
 
         try:
-            if link := self._gsh.calendar.event_exists(ticket.ttc_id):
+            if link := gsh.calendar.event_exists(ticket.ttc_id, config):
                 log(LogLevel.Status,
                     f"\tFound the event at {link}. Not creating it again")
             else:
                 log(LogLevel.Status,
                     f"\tUploading {ticket_fp} to Google Drive")
-                upload_response = self._gsh.drive.upload_pdf(ticket_fp)
+                upload_response = gsh.drive.upload_pdf(ticket_fp, config)
 
                 if upload_response:
                     log(LogLevel.Status,
@@ -64,8 +69,8 @@ class TicketFolderHandler(PatternMatchingEventHandler):
                     log(LogLevel.Warning, f"Failure to upload {ticket_fp}")
 
                 log(LogLevel.Status, "\tCreating event")
-                link = self._gsh.calendar.insert_event(ticket.ttc_id, ticket.summary, ticket.from_where,
-                                                       ticket.description, upload_response, ticket.departure, ticket.arrival, DEFAULT_REMINDERS, REMINDER_NOTIFICATION_TYPE, DEFAULT_EVENT_COLOR)
+                link = gsh.calendar.insert_event(ticket.ttc_id, ticket.summary, ticket.from_where,
+                                                 ticket.description, upload_response, ticket.departure, ticket.arrival, config)
                 log(LogLevel.Status, f"\tEvent created at {link}")
             log(LogLevel.Status, f"Finished processing {ticket_fp}")
         except Exception as error:
@@ -73,13 +78,13 @@ class TicketFolderHandler(PatternMatchingEventHandler):
                 "Failure to perform some Google API call. Skipping ticket...")
 
     # The on_created event fires as soon as the file is created. This may result in the script getting an incompletely transferred file to parse resulting in parsing errors
-    # Hence we are polling every FILE_TRANSFER_POLLING_INTERVAL seconds to check if the file size of the ticket is growing or not
+    # Hence we are polling every file_transfer_polling_interval seconds to check if the file size of the ticket is growing or not
     @staticmethod
-    def _wait_for_transfer_completion(ticket_fp: Path) -> bool:
+    def _wait_for_transfer_completion(ticket_fp: Path, config: Configuration) -> bool:
         start_time = time.time()
 
         prev_size = -1
-        while time.time() - start_time < FILE_TRANSFER_TIMEOUT:
+        while time.time() - start_time < config.file_transfer_timeout.total_seconds():
             if ticket_fp.is_file():
                 new_size = ticket_fp.stat().st_size
 
@@ -87,5 +92,6 @@ class TicketFolderHandler(PatternMatchingEventHandler):
                     return True
                 prev_size = new_size
 
-            time.sleep(FILE_TRANSFER_POLLING_INTERVAL)
+            time.sleep(
+                config.file_transfer_polling_interval.total_seconds())
         return False

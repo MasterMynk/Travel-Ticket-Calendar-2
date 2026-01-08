@@ -1,22 +1,21 @@
-from pathlib import Path
 from typing import Callable, Self
-from datetime import datetime, timedelta
+from datetime import datetime
 
 from google.oauth2.credentials import Credentials
 from google.auth import external_account_authorized_user
 
+from Configuration import Configuration
 from GDrive import FileUploadResponse
 from GService import GService
 from Logger import LogLevel, log
-from common import ReminderNotificationType, DEFAULT_CALENDAR_ID, CalendarEventColor
 
 
 class GCalendar(GService):
-    def __init__(self: Self, token_fp: Path, credentials: Credentials | external_account_authorized_user.Credentials, refresh_credentials: Callable) -> None:
-        super().__init__(token_fp, "calendar", "v3", credentials, refresh_credentials)
+    def __init__(self: Self, config: Configuration, credentials: Credentials | external_account_authorized_user.Credentials, refresh_credentials: Callable[[Configuration], None]) -> None:
+        super().__init__("calendar", "v3", credentials, refresh_credentials)
         log(LogLevel.Status, "Done initializing Google Calendar API")
 
-    def insert_event(self: Self, ttc_id: str, summary: str, location: str, description: str, ticket_upload: FileUploadResponse | None, start: datetime, end: datetime, reminders: list[timedelta], reminder_type: ReminderNotificationType, color: CalendarEventColor) -> str:
+    def insert_event(self: Self, ttc_id: str, summary: str, location: str, description: str, ticket_upload: FileUploadResponse | None, start: datetime, end: datetime, config: Configuration) -> str:
         event_data = {
             "summary": summary,
             "location": location,
@@ -31,12 +30,12 @@ class GCalendar(GService):
                 "useDefault": False,
                 "overrides": [
                     {
-                        "method": reminder_type.name,
+                        "method": config.reminder_notification_type.name,
                         "minutes": reminder.total_seconds() // 60
-                    } for reminder in reminders
+                    } for reminder in config.reminders
                 ]
             },
-            "colorId": str(color.value),
+            "colorId": str(config.event_color.value),
             "extendedProperties": {
                 "private": {
                     "ttc_id": ttc_id
@@ -52,22 +51,22 @@ class GCalendar(GService):
         return self._perform_gapi_call(
             lambda: self._service.events()
             .insert(
-                calendarId=DEFAULT_CALENDAR_ID,
+                calendarId=config.calendar_id,
                 body=event_data,
                 supportsAttachments=ticket_upload is not None
             )
-            .execute()
+            .execute(), config
         )["htmlLink"]
 
-    def event_exists(self: Self, ttc_id: str) -> str | None:
+    def event_exists(self: Self, ttc_id: str, config: Configuration) -> str | None:
         found_events = self._perform_gapi_call(
             lambda: self._service.events()
             .list(
-                calendarId=DEFAULT_CALENDAR_ID,
+                calendarId=config.calendar_id,
                 privateExtendedProperty=f"ttc_id={ttc_id}",
                 singleEvents=True
             )
-            .execute()
+            .execute(), config
         )["items"]
 
         if len(found_events) > 0:

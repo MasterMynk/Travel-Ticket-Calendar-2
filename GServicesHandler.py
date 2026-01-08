@@ -11,59 +11,58 @@ from google.auth.exceptions import RefreshError, TransportError
 from google.auth import external_account_authorized_user
 from oauthlib.oauth2.rfc6749.errors import AccessDeniedError
 
+from Configuration import Configuration
 from GCalendar import GCalendar
 from GDrive import GDrive
 from GService import GService
 from Logger import LogLevel, log
-from common import MAX_RETRIES_FOR_NETWORK_REQUESTS, SCOPES, calculate_backoff
+from common import SCOPES, calculate_backoff
 
 
 class GServicesHandler:
-    def __init__(self: Self, credentials_fp: Path, token_fp: Path) -> None:
+    def __init__(self: Self, config: Configuration) -> None:
         # credentials_fp must exist for this script to run successfully
         # token_fp will exist if this script has been used once before and the user has logged in using oAuth 2.0 atleast once but is not strictly necessary for the functioning of this script
 
-        self._credentials_fp = credentials_fp
-        self._token_fp = token_fp
-
-        credentials = self._generate_credentials()
+        credentials = self._generate_credentials(config)
 
         # Save the credentials for the next run
-        self._save_credentials(credentials.to_json())
+        self._save_credentials(credentials.to_json(), config)
 
         self.calendar = GCalendar(
-            token_fp, credentials, self._refresh_credentials)
-        self.drive = GDrive(token_fp, credentials, self._refresh_credentials)
+            config, credentials, self._refresh_credentials)
+        self.drive = GDrive(config, credentials, self._refresh_credentials)
         self.services: list[GService] = [self.calendar, self.drive]
 
-    def _generate_credentials(self: Self) -> Credentials | external_account_authorized_user.Credentials:
+    def _generate_credentials(self: Self, config: Configuration) -> Credentials | external_account_authorized_user.Credentials:
         attempt = 0
         while True:
             try:
-                credentials = self._load_token_fp()
+                credentials = self._load_token_fp(config)
 
                 if not self._credentials_verified(credentials):
                     if self._credentials_expired(credentials):
                         assert credentials is not None
                         self._refresh_token(credentials)
                     else:
-                        credentials = self._sign_user_in()
+                        credentials = self._sign_user_in(config)
 
                 assert credentials is not None
                 return credentials
             except TransportError as error:
-                attempt = min([MAX_RETRIES_FOR_NETWORK_REQUESTS, attempt + 1])
+                attempt = min(
+                    [config.max_retries_for_network_requests, attempt + 1])
                 log(LogLevel.Warning,
                     f"Having some trouble getting to Google APIs. Retrying in {calculate_backoff(attempt)} seconds")
                 time.sleep(calculate_backoff(attempt))
 
             except RefreshError as error:
                 log(LogLevel.Warning, error)
-                self._delete_token_fp()
+                self._delete_token_fp(config)
 
             except json.JSONDecodeError:
-                log(LogLevel.Warning, f"{self._token_fp} corrupted.")
-                self._delete_token_fp()
+                log(LogLevel.Warning, f"{config.gapi_token_json} corrupted.")
+                self._delete_token_fp(config)
 
             except AccessDeniedError:
                 log(LogLevel.Error,
@@ -75,19 +74,19 @@ class GServicesHandler:
                     f"Looks like you didn't give all the required permissions {warning}. Exiting...")
                 sys.exit(-1)
 
-    def _delete_token_fp(self: Self) -> None:
+    def _delete_token_fp(self: Self, config: Configuration) -> None:
         log(LogLevel.Status,
-            f"Deleting '{self._token_fp}' and trying again...")
+            f"Deleting '{config.gapi_token_json}' and trying again...")
 
         # If the file doesn't exist and there's an attempt to delete it means we've already been here
         # This is a fatal error and the program can't continue
-        self._token_fp.unlink()
+        config.gapi_token_json.unlink()
 
-    def _load_token_fp(self: Self) -> Credentials | None:
-        if self._token_fp.is_file():
-            log(LogLevel.Status, f"Loading from '{self._token_fp}'")
+    def _load_token_fp(self: Self, config: Configuration) -> Credentials | None:
+        if config.gapi_token_json.is_file():
+            log(LogLevel.Status, f"Loading from '{config.gapi_token_json}'")
             return Credentials.from_authorized_user_file(
-                str(self._token_fp), SCOPES)
+                str(config.gapi_token_json), SCOPES)
 
     @staticmethod
     def _credentials_verified(credentials: Credentials | None) -> bool:
@@ -103,20 +102,20 @@ class GServicesHandler:
         credentials.refresh(Request())
         log(LogLevel.Status, f"Token refreshed")
 
-    def _sign_user_in(self: Self) -> Credentials | external_account_authorized_user.Credentials:
+    def _sign_user_in(self: Self, config: Configuration) -> Credentials | external_account_authorized_user.Credentials:
         log(LogLevel.Status, f"Trying to sign user in")
 
         try:
             flow = InstalledAppFlow.from_client_secrets_file(
-                str(self._credentials_fp), SCOPES
+                str(config.gapi_credentials_json), SCOPES
             )
         except FileNotFoundError:
             log(LogLevel.Error,
-                f"'{self._credentials_fp}' not found. Exiting...")
+                f"'{config.gapi_credentials_json}' not found. Exiting...")
             sys.exit(-1)
         except json.JSONDecodeError:
             log(LogLevel.Error,
-                f"'{self._credentials_fp}' corrupted. Exiting...")
+                f"'{config.gapi_credentials_json}' corrupted. Exiting...")
             sys.exit(-1)
 
         credentials = flow.run_local_server(port=0)
@@ -124,15 +123,15 @@ class GServicesHandler:
 
         return credentials
 
-    def _save_credentials(self: Self, content: str) -> None:
-        self._token_fp.parent.mkdir(parents=True, exist_ok=True)
-        with open(self._token_fp, "w") as token:
+    def _save_credentials(self: Self, content: str, config: Configuration) -> None:
+        config.gapi_token_json.parent.mkdir(parents=True, exist_ok=True)
+        with open(config.gapi_token_json, "w") as token:
             token.write(content)
         log(LogLevel.Status, "Saved token for future use")
 
     # To be called by a service initialized in the handler if while performing an API call it is found out that the permissions have been revoked
-    def _refresh_credentials(self: Self) -> None:
-        credentials = self._sign_user_in()
-        self._save_credentials(credentials.to_json())
+    def _refresh_credentials(self: Self, config: Configuration) -> None:
+        credentials = self._sign_user_in(config)
+        self._save_credentials(credentials.to_json(), config)
         for service in self.services:
             service.rebuild(credentials)
