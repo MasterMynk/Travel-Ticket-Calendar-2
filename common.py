@@ -47,10 +47,11 @@ RAIL_RADAR_CREDENTIALS_FP = Path(
 MODEL_CREDENTIALS_FP = Path(__file__).parent / "gemini_credentials.json"
 
 TICKET_FOLDER = Path.home() / "travels/"
+CONFIGURATION_FOLDER = Path.home() / ".config/Travel Ticket Calendar"
 
 MAX_RETRIES_FOR_NETWORK_REQUESTS = 7
 FILE_TRANSFER_TIMEOUT = 10  # seconds
-FILE_TRANSFER_POLLING_INTERVAL = 0.25  # sconds
+FILE_TRANSFER_POLLING_INTERVAL = 0.25  # seconds
 
 AI_MODEL = "gemini-2.5-flash-lite"
 
