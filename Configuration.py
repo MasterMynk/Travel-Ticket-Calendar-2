@@ -94,7 +94,16 @@ class Configuration:
                 return setattr(config, key, val)
 
             if type(value) is type(config_attr):
-                setter(value)
+                if type(value) is list:
+                    assert type(config_attr) is list
+
+                    log(LogLevel.Status, f"Configuring reminders...")
+                    setter(
+                        [cls._timedeltadict_to_timedelta(val) for val in value if cls._is_valid_timedeltadict(val)], False)
+                    log(LogLevel.Status,
+                        f"Configured {key} -> {[str(val) for val in config_attr]}")
+                else:
+                    setter(value)
 
             elif type(value) is str:
                 if isinstance(config_attr, Path):
@@ -108,13 +117,6 @@ class Configuration:
                             f"Invalid value {value} for {key}. {key} can only take values: {", ".join([val.name for val in type(config_attr)])}")
                         log(LogLevel.Status,
                             f"Using default value: {config_attr.name}")
-
-            elif type(value) is list and type(config_attr) is list:
-                log(LogLevel.Status, f"Configuring reminders...")
-                setter(
-                    [cls._timedeltadict_to_timedelta(val) for val in value if cls._is_valid_timedeltadict(val)], False)
-                log(LogLevel.Status,
-                    f"Configured {key} -> {[str(val) for val in config_attr]}")
 
             elif type(value) is dict and cls._is_valid_timedeltadict(value):
                 setter(cls._timedeltadict_to_timedelta(
