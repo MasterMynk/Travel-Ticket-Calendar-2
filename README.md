@@ -1,11 +1,35 @@
-# Travel Ticket Calendar v2
+# Travel Ticket Calendar v2 with Gemini AI Integration
 
 A program that automatically adds your flight/train/bus ticket as an event to your Google Calendar:
 
 -   Runs in the background watching a folder.
 -   When a ticket PDF is added to the folder the program scans it and uploads it to your Google Calendar
 
-# Set up
+## Table of Contents
+
+1. [Improvements and reason for rewrite](#improvements-over-previous-attempt-and-why-the-re-write)
+2. [Setup](#setup)
+   1. [Clone the repo](#1-clone-the-repo)
+   2. [Install Dependencies](#2-install-dependencies)
+   3. [Purpose of different APIs used in this project](#3-identify-required-apiscredentials)
+   4. [Cloud Console setup](#4-google-cloud-console-setup-for-calendar-and-drive-api)
+   5. [Google AI Studio setup](#5-google-ai-studio-setup)
+   6. [RailRadar setup](#6-railradar-api-setup)
+3. [Usage](#usage--configuration)
+
+## Improvements over previous attempt and why the re-write
+
+* **Ease of use improvements:** The script now watches a folder, detects an addition and automatically uploads it to the calendar. NO manual intervention needed
+* **Versatility improvements:** Can handle any type of ticket (bus/flight/train) thrown at it due to integration with Gemini
+* **Robustness improvements:** Handles many different types of errors effectively. Knowing when to let go of something and knowing when to quit instead of constantly nagging you till the procedure is complete like the last version did
+* **Codebase improvements:** Much more maintainable and hierarchial code as compared to v1. Highly object oriented with almost every class receiving its own dedicated module
+
+* **Why the rewrite?**
+   * The codebsae of v1 was highly unmaintainable; New features would take unreasonable effort to add.
+   * Interactions with v1 were very clunky and not streamlined; Having to supply details through the commandline is a very poor design
+   * Limited set of tickets could be parsed; For each new ticket encounted I'd have to painstakingly add a new parser
+
+# Setup
 
 ## 1. Clone the repo
 
@@ -90,7 +114,7 @@ pip install -r requirements.txt
 
 -   **Do NOT share your `credentials.json` or `token.json` file (generated after running the script for the first time and logging in) with anyone**
 
-## Google AI Studio Setup
+## 5. Google AI Studio Setup
 
 1. Go to [Google AI Studio's API Keys section](https://aistudio.google.com/api-keys)
 2. Click on `Create API key` in the top right corner
@@ -107,7 +131,7 @@ pip install -r requirements.txt
 { "api_key": "AIzaSyC6Doa9ho9aSAGNlePTY7psS1kPw-f6bXo" }
 ```
 
-## RailRadar API setup
+## 6. RailRadar API setup
 
 1. Go to [RailRadar website](https://railradar.in/)
 2. Sign up for an account
@@ -118,4 +142,86 @@ pip install -r requirements.txt
 { "X-API-Key": "rr_fc7daqttoc3sjmcfag8xveeq6yo8aqpj" }
 ```
 
-# Usage
+# Usage & Configuration
+* After the setup running the program is as simple as running the following commands from within the project directory
+
+```bash
+source venv/bin/activate
+python ./main.py
+```
+
+* The program then runs indefinitely unless terminated by pressing `Ctrl+C` or some other way
+
+* To configure the program a `config.toml` file can be provided which the program will look for upon startup in `~/.config/Travel Ticket Calendar/`
+
+```toml
+# $HOME/.config/Travel Ticket Calendar/config.toml
+
+gapi_credentials_path="<Folder containing main.py that you're running>/credentials.json"
+gapi_token_path="<Folder containing main.py>/token.json"
+rail_radar_credentials_path="<Folder containing main.py>/rail_radar_credentials.json"
+ai_model_credentials_path="<Folder containing main.py>/gemini_credentials.json"
+log_path="<Folder containing main.py>/log.txt"
+
+cache_folder="/home/<your username>/.cache/Travel Ticket Calendar/"
+ticket_folder="/home/<your username>/travels/"
+
+calendar_id="primary"
+reminder_notification_type="popup"
+event_color="Banana"
+max_retries_for_network_requests=7
+ai_model="gemini-2.5-flash-lite"
+
+[cache_data_refresh_time]
+magnitude=1
+unit="weeks"
+
+[file_transfer_timeout]
+magnitude=10
+unit="seconds"
+
+[file_transfer_polling_interval]
+magnitude=250
+unit="milliseconds"
+
+[[reminders]]
+magnitude=30
+unit="minutes"
+
+[[reminders]]
+magnitude=2
+unit="hours"
+
+[[reminders]]
+magnitude=1
+unit="weeks"
+```
+
+* These are all the options you can configure with the configuration file
+* The first 4 keys can be used to configure the locations of your credential files
+* Setting of a `log_path` will result in the logs being put in a separate file instead of on `stdout` -- Very useful when running as a startup script
+* `ticket_folder` Specifies which folder the program will monitor
+* `reminder_notification_type` can only take values `popup` or `email`
+* `event_color` can only take values:
+   1. `Lavendar`
+   1. `Sage`
+   1. `Grape`
+   1. `Flamingo`
+   1. `Banana`
+   1. `Tangerine`
+   1. `Peacock`
+   1. `Graphite`
+   1. `Blueberry`
+   1. `Basil`
+   1. `Tomato`
+* `[[reminders]]` can be added as many times as you like and will determine the reminders to attach to the Google Event
+* The `unit` field of a reminder can only take units:
+   1. `days`
+   1. `seconds`
+   1. `microseconds`
+   1. `milliseconds`
+   1. `minutes`
+   1. `hours`
+   1. `weeks`
+
+* **It is NOT necessary to supply all of these fields. Fields that are not supplied will assume their default values and the above configuration file represents those defaults**

@@ -3,3 +3,4 @@ token.json
 __pycache__/
 rail_radar_credentials.json
 gemini_credentials.json
+log.txt
