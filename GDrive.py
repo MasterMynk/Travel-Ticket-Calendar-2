@@ -30,8 +30,8 @@ class FileUploadResponse:
 
 class GDrive(GService):
     def __init__(self: Self, config: Configuration, credentials: Credentials | external_account_authorized_user.Credentials, refresh_credentials: Callable) -> None:
-        super().__init__("drive", "v3", credentials, refresh_credentials)
-        log(LogLevel.Status, "Done initializing Google Drive API")
+        super().__init__("drive", "v3", credentials, refresh_credentials, config)
+        log(LogLevel.Status, config, "Done initializing Google Drive API")
 
     def upload_pdf(self: Self, path: Path, config: Configuration) -> FileUploadResponse | None:
         try:

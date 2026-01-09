@@ -12,8 +12,8 @@ from Logger import LogLevel, log
 
 class GCalendar(GService):
     def __init__(self: Self, config: Configuration, credentials: Credentials | external_account_authorized_user.Credentials, refresh_credentials: Callable[[Configuration], None]) -> None:
-        super().__init__("calendar", "v3", credentials, refresh_credentials)
-        log(LogLevel.Status, "Done initializing Google Calendar API")
+        super().__init__("calendar", "v3", credentials, refresh_credentials, config)
+        log(LogLevel.Status, config, "Done initializing Google Calendar API")
 
     def insert_event(self: Self, ttc_id: str, summary: str, location: str, description: str, ticket_upload: FileUploadResponse | None, start: datetime, end: datetime, config: Configuration) -> str:
         event_data = {

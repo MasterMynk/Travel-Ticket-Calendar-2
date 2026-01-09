@@ -17,24 +17,24 @@ class Ticket:
     def __init__(self: Self, filepath: Path, model: Model, config: Configuration) -> None:
         self._filepath = filepath
 
-        log(LogLevel.Status, "\tExtracting Ticket text")
+        log(LogLevel.Status, config, "\tExtracting Ticket text")
         with PdfReader(self._filepath) as pdf:
             ticket_text = pdf.pages[0].extract_text()
 
         if ticket_text.find("IRCTC") != -1:
-            log(LogLevel.Status, "\tIdentified ticket as IRCTC ticket")
+            log(LogLevel.Status, config, "\tIdentified ticket as IRCTC ticket")
             self._data = self._process_as_irctc_tkt(ticket_text, config)
         else:
-            log(LogLevel.Status,
+            log(LogLevel.Status, config,
                 "Couldn't identify the type of ticket to parse. Parsing with AI Model.")
             self._data = self._process_with_ai_model(
                 self._filepath, model, config)
 
     def _process_as_irctc_tkt(self: Self, ticket_text: str, config: Configuration) -> TravelData:
         data = self._extract_data_from_irctc_ticket(
-            self._filepath, ticket_text)
+            self._filepath, ticket_text, config)
 
-        log(LogLevel.Status,
+        log(LogLevel.Status, config,
             f"\tFiguring out information for train number: {data["train_number"]} from RailRadar")
 
         rrh = self._get_rrh_stations_marked(data, ticket_text, config)
@@ -61,7 +61,7 @@ class Ticket:
         )
 
     @staticmethod
-    def _extract_data_from_irctc_ticket(ticket_fp: Path, ticket_text: str) -> dict:
+    def _extract_data_from_irctc_ticket(ticket_fp: Path, ticket_text: str, config: Configuration) -> dict:
         # Collecting:
         # 1. Date of departure
         # 2. PNR number for generating TTC ID
@@ -90,7 +90,8 @@ class Ticket:
             data["departure_date"], IRCTC_DATE_FORMAT
         )
 
-        log(LogLevel.Status, "\tParsed IRCTC ticket for Date of departure, pnr, train number and seating arrangement.")
+        log(LogLevel.Status, config,
+            "\tParsed IRCTC ticket for Date of departure, pnr, train number and seating arrangement.")
 
         return data
 

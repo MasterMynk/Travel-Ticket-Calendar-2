@@ -43,7 +43,7 @@ class GServicesHandler:
                 if not self._credentials_verified(credentials):
                     if self._credentials_expired(credentials):
                         assert credentials is not None
-                        self._refresh_token(credentials)
+                        self._refresh_token(credentials, config)
                     else:
                         credentials = self._sign_user_in(config)
 
@@ -52,41 +52,43 @@ class GServicesHandler:
             except TransportError as error:
                 attempt = min(
                     [config.max_retries_for_network_requests, attempt + 1])
-                log(LogLevel.Warning,
+                log(LogLevel.Warning, config,
                     f"Having some trouble getting to Google APIs. Retrying in {calculate_backoff(attempt)} seconds")
                 time.sleep(calculate_backoff(attempt))
 
             except RefreshError as error:
-                log(LogLevel.Warning, error)
+                log(LogLevel.Warning, config, error)
                 self._delete_token_fp(config)
 
             except json.JSONDecodeError:
-                log(LogLevel.Warning, f"{config.gapi_token_json} corrupted.")
+                log(LogLevel.Warning, config,
+                    f"{config.gapi_token_path} corrupted.")
                 self._delete_token_fp(config)
 
             except AccessDeniedError:
-                log(LogLevel.Error,
+                log(LogLevel.Error, config,
                     f"User sign in unsuccessful. Did you cancel it? Exiting...")
                 sys.exit(-1)
 
             except Warning as warning:
-                log(LogLevel.Error,
+                log(LogLevel.Error, config,
                     f"Looks like you didn't give all the required permissions {warning}. Exiting...")
                 sys.exit(-1)
 
     def _delete_token_fp(self: Self, config: Configuration) -> None:
-        log(LogLevel.Status,
-            f"Deleting '{config.gapi_token_json}' and trying again...")
+        log(LogLevel.Status, config,
+            f"Deleting '{config.gapi_token_path}' and trying again...")
 
         # If the file doesn't exist and there's an attempt to delete it means we've already been here
         # This is a fatal error and the program can't continue
-        config.gapi_token_json.unlink()
+        config.gapi_token_path.unlink()
 
     def _load_token_fp(self: Self, config: Configuration) -> Credentials | None:
-        if config.gapi_token_json.is_file():
-            log(LogLevel.Status, f"Loading from '{config.gapi_token_json}'")
+        if config.gapi_token_path.is_file():
+            log(LogLevel.Status, config,
+                f"Loading from '{config.gapi_token_path}'")
             return Credentials.from_authorized_user_file(
-                str(config.gapi_token_json), SCOPES)
+                str(config.gapi_token_path), SCOPES)
 
     @staticmethod
     def _credentials_verified(credentials: Credentials | None) -> bool:
@@ -97,41 +99,41 @@ class GServicesHandler:
         return bool(credentials and credentials.expired and credentials.refresh_token)
 
     @staticmethod
-    def _refresh_token(credentials: Credentials) -> None:
-        log(LogLevel.Status, f"Requesting a refresh of token")
+    def _refresh_token(credentials: Credentials, config: Configuration) -> None:
+        log(LogLevel.Status, config, f"Requesting a refresh of token")
         credentials.refresh(Request())
-        log(LogLevel.Status, f"Token refreshed")
+        log(LogLevel.Status, config, f"Token refreshed")
 
     def _sign_user_in(self: Self, config: Configuration) -> Credentials | external_account_authorized_user.Credentials:
-        log(LogLevel.Status, f"Trying to sign user in")
+        log(LogLevel.Status, config, f"Trying to sign user in")
 
         try:
             flow = InstalledAppFlow.from_client_secrets_file(
-                str(config.gapi_credentials_json), SCOPES
+                str(config.gapi_credentials_path), SCOPES
             )
         except FileNotFoundError:
-            log(LogLevel.Error,
-                f"'{config.gapi_credentials_json}' not found. Exiting...")
+            log(LogLevel.Error, config,
+                f"'{config.gapi_credentials_path}' not found. Exiting...")
             sys.exit(-1)
         except json.JSONDecodeError:
-            log(LogLevel.Error,
-                f"'{config.gapi_credentials_json}' corrupted. Exiting...")
+            log(LogLevel.Error, config,
+                f"'{config.gapi_credentials_path}' corrupted. Exiting...")
             sys.exit(-1)
 
         credentials = flow.run_local_server(port=0)
-        log(LogLevel.Status, f"User signed in")
+        log(LogLevel.Status, config, f"User signed in")
 
         return credentials
 
     def _save_credentials(self: Self, content: str, config: Configuration) -> None:
-        config.gapi_token_json.parent.mkdir(parents=True, exist_ok=True)
-        with open(config.gapi_token_json, "w") as token:
+        config.gapi_token_path.parent.mkdir(parents=True, exist_ok=True)
+        with open(config.gapi_token_path, "w") as token:
             token.write(content)
-        log(LogLevel.Status, "Saved token for future use")
+        log(LogLevel.Status, config, "Saved token for future use")
 
     # To be called by a service initialized in the handler if while performing an API call it is found out that the permissions have been revoked
     def _refresh_credentials(self: Self, config: Configuration) -> None:
         credentials = self._sign_user_in(config)
         self._save_credentials(credentials.to_json(), config)
         for service in self.services:
-            service.rebuild(credentials)
+            service.rebuild(credentials, config)

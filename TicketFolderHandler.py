@@ -20,7 +20,7 @@ class TicketFolderHandler(PatternMatchingEventHandler):
         try:
             self._gsh = GServicesHandler(self.config)
         except Exception as error:
-            log(LogLevel.Error,
+            log(LogLevel.Error, self.config,
                 f"Unhandled exception {error} while initializing Google APIs. Exiting...")
             sys.exit(-1)
 
@@ -37,44 +37,45 @@ class TicketFolderHandler(PatternMatchingEventHandler):
                 self._process_ticket(ticket_fp, self._gsh,
                                      self._model, self.config)
             else:
-                log(LogLevel.Warning,
+                log(LogLevel.Warning, self.config,
                     f"Timeout reached but file transfer not complete. Skipping ticket '{ticket_fp}'...")
 
     @staticmethod
     def _process_ticket(ticket_fp: Path, gsh: GServicesHandler, model: Model, config: Configuration) -> None:
-        log(LogLevel.Status, f"Processing {ticket_fp}")
+        log(LogLevel.Status, config, f"Processing {ticket_fp}")
 
         try:
             ticket = Ticket(ticket_fp, model, config)
         except Exception as error:
-            log(LogLevel.Error,
+            log(LogLevel.Error, config,
                 f"Failure to parse ticket: {error}")
-            log(LogLevel.Error,
+            log(LogLevel.Error, config,
                 "Unimplemented feature of user intervention to supply correct info. Skipping ticket...")
             return
 
         try:
             if link := gsh.calendar.event_exists(ticket.ttc_id, config):
-                log(LogLevel.Status,
+                log(LogLevel.Status, config,
                     f"\tFound the event at {link}. Not creating it again")
             else:
-                log(LogLevel.Status,
+                log(LogLevel.Status, config,
                     f"\tUploading {ticket_fp} to Google Drive")
                 upload_response = gsh.drive.upload_pdf(ticket_fp, config)
 
                 if upload_response:
-                    log(LogLevel.Status,
+                    log(LogLevel.Status, config,
                         f"\tUploaded {ticket_fp} to {upload_response.webViewLink}")
                 else:
-                    log(LogLevel.Warning, f"Failure to upload {ticket_fp}")
+                    log(LogLevel.Warning, config,
+                        f"Failure to upload {ticket_fp}")
 
-                log(LogLevel.Status, "\tCreating event")
+                log(LogLevel.Status, config, "\tCreating event")
                 link = gsh.calendar.insert_event(ticket.ttc_id, ticket.summary, ticket.from_where,
                                                  ticket.description, upload_response, ticket.departure, ticket.arrival, config)
-                log(LogLevel.Status, f"\tEvent created at {link}")
-            log(LogLevel.Status, f"Finished processing {ticket_fp}")
+                log(LogLevel.Status, config, f"\tEvent created at {link}")
+            log(LogLevel.Status, config, f"Finished processing {ticket_fp}")
         except Exception as error:
-            log(LogLevel.Error,
+            log(LogLevel.Error, config,
                 "Failure to perform some Google API call. Skipping ticket...")
 
     # The on_created event fires as soon as the file is created. This may result in the script getting an incompletely transferred file to parse resulting in parsing errors

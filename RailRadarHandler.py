@@ -74,7 +74,7 @@ class RailRadarHandler:
     def _get_train_info(self: Self, config: Configuration) -> list[Station]:
         for attempt in range(config.max_retries_for_network_requests):
             try:
-                with open(config.rail_radar_credentials_json, "r") as credentials_json:
+                with open(config.rail_radar_credentials_path, "r") as credentials_json:
                     # Returning a list containing dictionaries representing all the stations the train stops at with only the required fields to save data
                     return [
                         {
@@ -84,33 +84,33 @@ class RailRadarHandler:
                             "code": station["stationCode"],
                             "name": station["stationName"],
                         }
-                        for station in self._api_call(self.train_number, json.loads(credentials_json.read()))["data"]["route"]
+                        for station in self._api_call(self.train_number, json.loads(credentials_json.read()), config)["data"]["route"]
                         if station["isHalt"] == 1
                     ]
             except FileNotFoundError:
-                log(LogLevel.Warning,
-                    f"'{config.rail_radar_credentials_json}' doesn't exist")
+                log(LogLevel.Warning, config,
+                    f"'{config.rail_radar_credentials_path}' doesn't exist")
                 raise
             except HTTPError:
                 raise
             except RequestException:
-                log(LogLevel.Warning,
+                log(LogLevel.Warning, config,
                     f"Network error while retrieving RailRadar info. Retrying in {calculate_backoff(attempt)} seconds...")
                 time.sleep(calculate_backoff(attempt))
             except IOError:
-                log(LogLevel.Warning,
-                    f"Couldn't open '{config.rail_radar_credentials_json}'")
+                log(LogLevel.Warning, config,
+                    f"Couldn't open '{config.rail_radar_credentials_path}'")
                 raise
             except json.JSONDecodeError:
-                log(LogLevel.Warning,
-                    f"Unable to parse '{config.rail_radar_credentials_json}'")
+                log(LogLevel.Warning, config,
+                    f"Unable to parse '{config.rail_radar_credentials_path}'")
                 raise
         raise Exception(
             "Connection Error. Are you connected to the internet?")
 
     @staticmethod
-    def _api_call(train_number: str, header: dict) -> dict:
-        log(LogLevel.Status, f"\t\tPerforming API call to RailRadar")
+    def _api_call(train_number: str, header: dict, config: Configuration) -> dict:
+        log(LogLevel.Status, config, f"\t\tPerforming API call to RailRadar")
 
         response = requests.get(
             f"https://api.railradar.in/api/v1/trains/{train_number}",

@@ -17,10 +17,11 @@ class TimedeltaDict(TypedDict):
 class ConfigurationDict(TypedDict, total=False):
     # This is what we will get on parsing config.toml
 
-    gapi_credentials_json: str
-    gapi_token_json: str
-    rail_radar_credentials_json: str
-    ai_model_credentials_json: str
+    gapi_credentials_path: str
+    gapi_token_path: str
+    rail_radar_credentials_path: str
+    ai_model_credentials_path: str
+    log_path: str
 
     cache_folder: str
     ticket_folder: str
@@ -43,10 +44,11 @@ class ConfigurationDict(TypedDict, total=False):
 # This is what the consumers of this module will use
 @dataclass
 class Configuration:
-    gapi_credentials_json: Path
-    gapi_token_json: Path
-    rail_radar_credentials_json: Path
-    ai_model_credentials_json: Path
+    gapi_credentials_path: Path
+    gapi_token_path: Path
+    rail_radar_credentials_path: Path
+    ai_model_credentials_path: Path
+    log_path: Path | None
 
     cache_folder: Path
     ticket_folder: Path
@@ -65,42 +67,32 @@ class Configuration:
 
     ai_model: str
 
-    @staticmethod
-    def _is_valid_timedeltadict(data: TimedeltaDict | dict) -> bool:
-        possible_units = ["days", "seconds", "microseconds",
-                          "milliseconds", "minutes", "hours", "weeks"]
-        is_valid = data["unit"] in possible_units
-
-        if not is_valid:
-            log(LogLevel.Warning,
-                f"Failure to process time duration set in configuration file: {data}. 'unit' field must only be one of these: {", ".join(possible_units)}")
-
-        return is_valid
-
-    @staticmethod
-    def _timedeltadict_to_timedelta(data: TimedeltaDict) -> timedelta:
-        return timedelta(**{data["unit"]: data["magnitude"]})
-
     @classmethod
     def from_config_dict(cls: type[Self], config_dict: ConfigurationDict) -> Self:
         config = cast(Self, copy.copy(DEFAULT_CONFIG))
+
+        if "log_path" in config_dict:
+            config.log_path = Path(config_dict["log_path"])
+
+        log(LogLevel.Status, config, f"config.toml found. Loading configuration.")
 
         for key, value in config_dict.items():
             config_attr = getattr(config, key, None)
 
             def setter(val, to_print=True) -> None:
                 if to_print:
-                    log(LogLevel.Status, f"Configuring {key} -> {value}")
+                    log(LogLevel.Status, config,
+                        f"Configuring {key} -> {value}")
                 return setattr(config, key, val)
 
             if type(value) is type(config_attr):
                 if type(value) is list:
                     assert type(config_attr) is list
 
-                    log(LogLevel.Status, f"Configuring reminders...")
+                    log(LogLevel.Status, config, f"Configuring reminders...")
                     setter(
-                        [cls._timedeltadict_to_timedelta(val) for val in value if cls._is_valid_timedeltadict(val)], False)
-                    log(LogLevel.Status,
+                        [_timedeltadict_to_timedelta(val) for val in value if _is_valid_timedeltadict(val, config)], False)
+                    log(LogLevel.Status, config,
                         f"\tConfigured {key} -> {[str(val) for val in config_attr]}")
                 else:
                     setter(value)
@@ -113,29 +105,48 @@ class Configuration:
                     if hasattr(type(config_attr), value):
                         setter(type(config_attr)[value])
                     else:
-                        log(LogLevel.Warning,
+                        log(LogLevel.Warning, config,
                             f"Invalid value {value} for {key}. {key} can only take values: {", ".join([val.name for val in type(config_attr)])}")
-                        log(LogLevel.Status,
+                        log(LogLevel.Status, config,
                             f"Using default value: {config_attr.name}")
 
                 else:
-                    log(LogLevel.Warning,
+                    log(LogLevel.Warning, config,
                         f"This key '{key}' must not be storing a data type of string or is invalid. Please check documentation.")
 
-            elif type(value) is dict and cls._is_valid_timedeltadict(value):
-                setter(cls._timedeltadict_to_timedelta(
+            elif type(value) is dict and _is_valid_timedeltadict(value, config):
+                setter(_timedeltadict_to_timedelta(
                     cast(TimedeltaDict, value)), False)
-                log(LogLevel.Status, f"Configured {key} -> {config_attr}")
+                log(LogLevel.Status, config,
+                    f"Configured {key} -> {config_attr}")
 
             else:
-                log(LogLevel.Status, f"Ignoring unrecognizable key: {key}")
+                log(LogLevel.Status, config,
+                    f"Ignoring unrecognizable key: {key}")
 
         return config
 
 
+def _is_valid_timedeltadict(data: TimedeltaDict | dict, config: Configuration) -> bool:
+    possible_units = ["days", "seconds", "microseconds",
+                      "milliseconds", "minutes", "hours", "weeks"]
+    is_valid = data["unit"] in possible_units
+
+    if not is_valid:
+        log(LogLevel.Warning, config,
+            f"Failure to process time duration set in configuration file: {data}. 'unit' field must only be one of these: {", ".join(possible_units)}")
+
+    return is_valid
+
+
+def _timedeltadict_to_timedelta(data: TimedeltaDict) -> timedelta:
+    return timedelta(**{data["unit"]: data["magnitude"]})
+
+
 DEFAULT_CONFIG = Configuration(
-    gapi_credentials_json=Path(__file__).parent / "credentials.json",
-    gapi_token_json=Path(__file__).parent / "token.json",
+    gapi_credentials_path=Path(__file__).parent / "credentials.json",
+    gapi_token_path=Path(__file__).parent / "token.json",
+    log_path=None,
     calendar_id="primary",
     reminder_notification_type=ReminderNotificationType.popup,
     reminders=[
@@ -146,9 +157,9 @@ DEFAULT_CONFIG = Configuration(
     event_color=CalendarEventColor.Banana,
     cache_folder=Path.home() / ".cache/Travel Ticket Calendar/",
     cache_data_refresh_time=timedelta(weeks=1),
-    rail_radar_credentials_json=Path(
+    rail_radar_credentials_path=Path(
         __file__).parent / "rail_radar_credentials.json",
-    ai_model_credentials_json=Path(
+    ai_model_credentials_path=Path(
         __file__).parent / "gemini_credentials.json",
     ticket_folder=Path.home() / "travels/",
     configuration_folder=Path.home() / ".config/Travel Ticket Calendar/",

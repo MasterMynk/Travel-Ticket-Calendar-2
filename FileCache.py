@@ -10,7 +10,8 @@ T = TypeVar("T")
 
 class FileCache(Generic[T]):
     def __init__(self: Self, code: str, to_update: Callable[[Configuration], T], to_store: Callable[[T], str], to_parse: Callable[[str], T], config: Configuration) -> None:
-        log(LogLevel.Status, f"\t\tChecking for cache with code: {code}")
+        log(LogLevel.Status, config,
+            f"\t\tChecking for cache with code: {code}")
 
         self._to_update = to_update
         self._to_store = to_store
@@ -18,11 +19,11 @@ class FileCache(Generic[T]):
         self._code = code
 
         if self.is_cache_available(config):
-            log(LogLevel.Status,
+            log(LogLevel.Status, config,
                 f"\t\t\tCache available for code: {self._code}; retrieving cache.")
             self.data = self.retrieve(config)
         else:
-            log(LogLevel.Status,
+            log(LogLevel.Status, config,
                 f"\t\t\tNo cache available for code: {self._code}.")
             self.data = self.update(config)
 
@@ -39,7 +40,7 @@ class FileCache(Generic[T]):
             with open(self._get_cache_fp(self._code, config), "r") as cache_file:
                 return self._to_parse(cache_file.read())
         except Exception as error:
-            log(LogLevel.Warning,
+            log(LogLevel.Warning, config,
                 f"Error retrieving file from cache for code {self._code}: {error}")
             return self.update(config)
 

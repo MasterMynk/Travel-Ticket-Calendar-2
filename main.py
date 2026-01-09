@@ -19,14 +19,14 @@ def main() -> None:
     try:
         observer.start()
     except FileNotFoundError as error:
-        log(LogLevel.Error,
+        log(LogLevel.Error, config_handler.config,
             f"'{config_handler.config.ticket_folder}' doesn't exist hence cannot monitor it {error}. Exiting...")
         sys.exit(-1)
 
     try:
         observer.join()
     except KeyboardInterrupt:
-        log(LogLevel.Status, "Stopping")
+        log(LogLevel.Status, config_handler.config, "Stopping")
 
 
 if __name__ == "__main__":

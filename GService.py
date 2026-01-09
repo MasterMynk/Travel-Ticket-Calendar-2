@@ -17,21 +17,22 @@ from common import calculate_backoff
 
 
 class GService:
-    def __init__(self: Self, api_name: str, api_version: str, credentials: Credentials | external_account_authorized_user.Credentials, refresh_credentials: Callable[[Configuration], None]) -> None:
+    def __init__(self: Self, api_name: str, api_version: str, credentials: Credentials | external_account_authorized_user.Credentials, refresh_credentials: Callable[[Configuration], None], config: Configuration) -> None:
         self._api_name = api_name
         self._api_version = api_version
-        self._service = self._build_service(credentials)
+        self._service = self._build_service(credentials, config)
         self._refresh_credentials = refresh_credentials
 
-    def _build_service(self: Self, credentials: Credentials | external_account_authorized_user.Credentials) -> Any:
+    def _build_service(self: Self, credentials: Credentials | external_account_authorized_user.Credentials, config: Configuration,) -> Any:
         try:
             return build(self._api_name, self._api_version, credentials=credentials)
         except UnknownApiNameOrVersion as error:
-            log(LogLevel.Error, f"Invalid API or version: {error}. Exiting...")
+            log(LogLevel.Error, config,
+                f"Invalid API or version: {error}. Exiting...")
             sys.exit(-1)
 
-    def rebuild(self: Self, credentials: Credentials | external_account_authorized_user.Credentials) -> None:
-        self._service = self._build_service(credentials)
+    def rebuild(self: Self, credentials: Credentials | external_account_authorized_user.Credentials, config: Configuration) -> None:
+        self._service = self._build_service(credentials, config)
 
     @staticmethod
     def _ensure_tz_aware(dt: datetime) -> datetime:
@@ -57,7 +58,7 @@ class GService:
         print(f"Failed to create event: {error}")
 
     def _handle_refresh_error(self: Self, error: RefreshError, config: Configuration) -> None:
-        log(LogLevel.Error,
+        log(LogLevel.Error, config,
             f"Permissions revoked from Google's side {error}. Trying to sign you in again.")
         self._refresh_credentials(config)
 
@@ -75,7 +76,7 @@ class GService:
                 self._handle_refresh_error(error, config)
             except Exception as error:
                 self._handle_event_error(error)
-            log(LogLevel.Status,
+            log(LogLevel.Status, config,
                 f"Retrying Google API call in {calculate_backoff(attempt)} seconds")
             time.sleep(calculate_backoff(attempt))
 
