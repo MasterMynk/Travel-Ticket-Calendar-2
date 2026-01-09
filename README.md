@@ -164,7 +164,9 @@ ai_model_credentials_path="<Folder containing main.py>/gemini_credentials.json"
 log_path="<Folder containing main.py>/log.txt"
 
 cache_folder="/home/<your username>/.cache/Travel Ticket Calendar/"
+# cache_folder="C:\\Users\\<your username>\\.cache\\Travel Ticket Calendar\\" on Windows
 ticket_folder="/home/<your username>/travels/"
+# cache_folder="C:\\Users\\<your username>\\travels\\" on Windows
 
 calendar_id="primary"
 reminder_notification_type="popup"
