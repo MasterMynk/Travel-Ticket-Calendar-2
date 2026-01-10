@@ -5,6 +5,11 @@ from plyer import notification
 
 from Logger import LogLevel, log
 
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from Configuration import Configuration
+
 class ReminderNotificationType(IntEnum):
     popup = auto()
     email = auto()
@@ -34,7 +39,7 @@ def calculate_backoff(attempt: int) -> float:
     return 2 ** attempt
 
 
-def notify(title: str, message: str, config) -> None:
+def notify(title: str, message: str, config: "Configuration") -> None:
     try:
         notification.notify(  # type: ignore
             title=title, message=message, app_name="Travel Ticket Calendar", timeout=10

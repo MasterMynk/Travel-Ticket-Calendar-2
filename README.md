@@ -169,12 +169,14 @@ gapi_credentials_path="<Folder containing main.py that you're running>/credentia
 gapi_token_path="<Folder containing main.py>/token.json"
 rail_radar_credentials_path="<Folder containing main.py>/rail_radar_credentials.json"
 ai_model_credentials_path="<Folder containing main.py>/gemini_credentials.json"
-log_path="<Folder containing main.py>/log.txt"
 
 cache_folder="/home/<your username>/.cache/Travel Ticket Calendar/"
 # cache_folder="C:\\Users\\<your username>\\.cache\\Travel Ticket Calendar\\" on Windows
+
 ticket_folder="/home/<your username>/travels/"
 # cache_folder="C:\\Users\\<your username>\\travels\\" on Windows
+
+log_folder="<Some Folder where logs should be stored>/" # The default value for this is None and the logs are printed to stdout in that case
 
 calendar_id="primary"
 reminder_notification_type="popup"
@@ -209,8 +211,9 @@ unit="weeks"
 
 * These are all the options you can configure with the configuration file
 * The first 4 keys can be used to configure the locations of your credential files
-* Setting of a `log_path` will result in the logs being put in a separate file instead of on `stdout` -- Very useful when running as a startup script
 * `ticket_folder` Specifies which folder the program will monitor
+* Setting of a `log_folder` will result in the logs being put in a separate file instead of on `stdout` -- Very useful when running as a startup script
+* Logs are put in different file with names like `log_10_01_2026.txt`
 * `reminder_notification_type` can only take values `popup` or `email`
 * `event_color` can only take values:
    1. `Lavendar`

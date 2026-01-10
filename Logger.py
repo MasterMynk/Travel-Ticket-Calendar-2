@@ -1,3 +1,4 @@
+from datetime import datetime
 from enum import IntEnum, auto
 
 # To avoid circular imports
@@ -14,10 +15,14 @@ class LogLevel(IntEnum):
 
 def log(level: LogLevel, config: "Configuration", *args) -> None:
     try:
-        if config.log_path is None:
+        if config.log_folder is None:
             print(f"[{level.name}]: ", *args)
         else:
-            with open(config.log_path, "a") as output:
+            today_log_path = config.log_folder / \
+                f"log_{datetime.now().strftime("%d_%m_%Y")}.txt"
+
+            today_log_path.parent.mkdir(parents=True, exist_ok=True)
+            with open(today_log_path, "a") as output:
                 output.write(f"[{level.name}]: {" ".join(args)}\n")
     except Exception as error:
         print(f"[Error]: Failure to open a log file: {error}")

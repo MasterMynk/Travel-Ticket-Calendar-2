@@ -21,7 +21,7 @@ class ConfigurationDict(TypedDict, total=False):
     gapi_token_path: str
     rail_radar_credentials_path: str
     ai_model_credentials_path: str
-    log_path: str
+    log_folder: str
 
     cache_folder: str
     ticket_folder: str
@@ -48,7 +48,7 @@ class Configuration:
     gapi_token_path: Path
     rail_radar_credentials_path: Path
     ai_model_credentials_path: Path
-    log_path: Path | None
+    log_folder: Path | None
 
     cache_folder: Path
     ticket_folder: Path
@@ -71,8 +71,8 @@ class Configuration:
     def from_config_dict(cls: type[Self], config_dict: ConfigurationDict) -> Self:
         config = cast(Self, copy.copy(DEFAULT_CONFIG))
 
-        if "log_path" in config_dict:
-            config.log_path = Path(config_dict["log_path"])
+        if "log_folder" in config_dict:
+            config.log_folder = Path(config_dict["log_folder"])
 
         log(LogLevel.Status, config, f"config.toml found. Loading configuration.")
 
@@ -146,7 +146,7 @@ def _timedeltadict_to_timedelta(data: TimedeltaDict) -> timedelta:
 DEFAULT_CONFIG = Configuration(
     gapi_credentials_path=Path(__file__).parent / "credentials.json",
     gapi_token_path=Path(__file__).parent / "token.json",
-    log_path=None,
+    log_folder=None,
     calendar_id="primary",
     reminder_notification_type=ReminderNotificationType.popup,
     reminders=[
