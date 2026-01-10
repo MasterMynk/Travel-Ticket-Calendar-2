@@ -4,6 +4,7 @@ A program that automatically adds your flight/train/bus ticket as an event to yo
 
 -   Runs in the background watching a folder.
 -   When a ticket PDF is added to the folder the program scans it and uploads it to your Google Calendar
+-  Sends a notification to your system to indicate success/failure
 
 ## Table of Contents
 
@@ -19,7 +20,7 @@ A program that automatically adds your flight/train/bus ticket as an event to yo
 
 ## Improvements over previous attempt and why the re-write
 
-* **Ease of use improvements:** The script now watches a folder, detects an addition and automatically uploads it to the calendar. NO manual intervention needed
+* **Ease of use improvements:** The script now watches a folder, detects an addition and automatically uploads it to the calendar. NO manual intervention needed. You just get a cute notification on your system when the ticket is parsed and uploaded
 * **Versatility improvements:** Can handle any type of ticket (bus/flight/train) thrown at it due to integration with Gemini
 * **Robustness improvements:** Handles many different types of errors effectively. Knowing when to let go of something and knowing when to quit instead of constantly nagging you till the procedure is complete like the last version did
 * **Codebase improvements:** Much more maintainable and hierarchial code as compared to v1. Highly object oriented with almost every class receiving its own dedicated module
@@ -45,6 +46,13 @@ python -m venv venv
 source ./venv/bin/activate
 pip install -r requirements.txt
 ```
+
+**Dependencies:**
+   1. Google libraries for Google APIs and Google Gemini
+   2. `pypdf` for reading IRCTC tickets
+   3. `requests` for RailRadar API
+   4. `watchdog` for efficient system-level folder monitoring
+   5. `plyer` to send notifications
 
 ## 3. Identify Required APIs/Credentials
 

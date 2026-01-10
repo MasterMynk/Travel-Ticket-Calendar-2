@@ -5,3 +5,4 @@ pypdf
 requests
 watchdog
 google-genai
+plyer

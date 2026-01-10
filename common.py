@@ -1,6 +1,9 @@
 from enum import IntEnum, auto
 from pathlib import Path
 
+from plyer import notification
+
+from Logger import LogLevel, log
 
 class ReminderNotificationType(IntEnum):
     popup = auto()
@@ -29,3 +32,12 @@ CONFIGURATION_FOLDER = Path.home() / ".config/Travel Ticket Calendar"
 
 def calculate_backoff(attempt: int) -> float:
     return 2 ** attempt
+
+
+def notify(title: str, message: str, config) -> None:
+    try:
+        notification.notify(  # type: ignore
+            title=title, message=message, app_name="Travel Ticket Calendar", timeout=10
+        )
+    except Exception as error:
+        log(LogLevel.Warning, config, f"Failure to send notification: {error}")

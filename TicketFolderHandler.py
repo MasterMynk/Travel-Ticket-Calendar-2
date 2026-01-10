@@ -2,7 +2,8 @@ from pathlib import Path
 import sys
 import time
 from typing import Self
-from watchdog.events import DirCreatedEvent, FileCreatedEvent,  PatternMatchingEventHandler
+
+from watchdog.events import DirCreatedEvent, FileCreatedEvent, PatternMatchingEventHandler
 
 from AiModelHandler import Model
 from Configuration import Configuration
@@ -10,6 +11,7 @@ from ConfigurationHandler import _ConfigurationHandler
 from GServicesHandler import GServicesHandler
 from Logger import LogLevel, log
 from Ticket import Ticket
+from common import notify
 
 
 class TicketFolderHandler(PatternMatchingEventHandler):
@@ -28,20 +30,26 @@ class TicketFolderHandler(PatternMatchingEventHandler):
 
         for ticket_fp in self.config.ticket_folder.glob("*.pdf"):
             self._process_ticket(ticket_fp, self._gsh,
-                                 self._model, self.config)
+                                 self._model, self.config, False)
 
     def on_created(self: Self, event: DirCreatedEvent | FileCreatedEvent) -> None:
         if isinstance(event.src_path, str):
             ticket_fp = Path(event.src_path)
             if self._wait_for_transfer_completion(ticket_fp, self.config):
+                notify("Detected New Ticket",
+                       f"Processing {event.src_path}", self.config)
+
                 self._process_ticket(ticket_fp, self._gsh,
-                                     self._model, self.config)
+                                     self._model, self.config, True)
+
             else:
+                notify("Skipping Ticket",
+                       f"{event.src_path} due to timeout", self.config)
                 log(LogLevel.Warning, self.config,
                     f"Timeout reached but file transfer not complete. Skipping ticket '{ticket_fp}'...")
 
     @staticmethod
-    def _process_ticket(ticket_fp: Path, gsh: GServicesHandler, model: Model, config: Configuration) -> None:
+    def _process_ticket(ticket_fp: Path, gsh: GServicesHandler, model: Model, config: Configuration, to_notify: bool) -> None:
         log(LogLevel.Status, config, f"Processing {ticket_fp}")
 
         try:
@@ -51,12 +59,17 @@ class TicketFolderHandler(PatternMatchingEventHandler):
                 f"Failure to parse ticket: {error}")
             log(LogLevel.Error, config,
                 "Unimplemented feature of user intervention to supply correct info. Skipping ticket...")
+            notify("Skipping Ticket",
+                   f"Failure to parse {ticket_fp}", config)
             return
 
         try:
             if link := gsh.calendar.event_exists(ticket.ttc_id, config):
                 log(LogLevel.Status, config,
                     f"\tFound the event at {link}. Not creating it again")
+                if to_notify:
+                    notify("Event Already Present",
+                           f"{ticket_fp} at {link}", config)
             else:
                 log(LogLevel.Status, config,
                     f"\tUploading {ticket_fp} to Google Drive")
@@ -73,6 +86,10 @@ class TicketFolderHandler(PatternMatchingEventHandler):
                 link = gsh.calendar.insert_event(ticket.ttc_id, ticket.summary, ticket.from_where,
                                                  ticket.description, upload_response, ticket.departure, ticket.arrival, config)
                 log(LogLevel.Status, config, f"\tEvent created at {link}")
+
+                if to_notify:
+                    notify("Finished Processing Ticket",
+                           f"{ticket_fp} to {link}", config)
             log(LogLevel.Status, config, f"Finished processing {ticket_fp}")
         except Exception as error:
             log(LogLevel.Error, config,
