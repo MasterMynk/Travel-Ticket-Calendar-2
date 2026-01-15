@@ -30,6 +30,7 @@ class ConfigurationDict(TypedDict, total=False):
 
     cache_folder: str
     ticket_folder: str
+    done_folder: str
     configuration_folder: str
 
     calendar_id: str
@@ -63,6 +64,7 @@ class Configuration:
 
     cache_folder: Path
     ticket_folder: Path
+    done_folder: Path
     configuration_folder: Path
 
     calendar_id: str
@@ -245,6 +247,7 @@ DEFAULT_CONFIG = Configuration(
     ai_model_credentials_path=Path(
         __file__).parent / "gemini_credentials.json",
     ticket_folder=Path.home() / "travels/",
+    done_folder=Path.home() / "travels/done/",
     configuration_folder=Path.home() / ".config/Travel Ticket Calendar/",
     max_retries_for_network_requests=7,
     file_transfer_timeout=timedelta(seconds=10),
