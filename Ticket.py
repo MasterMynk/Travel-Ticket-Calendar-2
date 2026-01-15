@@ -59,11 +59,10 @@ class Ticket:
                 rrh.arrival_datetime
             ),
             ttc_id=data["pnr"],
-            event_color=config.event_color,
+            event_color=data["event_color"],
         )
 
-    @staticmethod
-    def _extract_data_from_irctc_ticket(ticket_fp: Path, ticket_text: str, config: Configuration) -> dict:
+    def _extract_data_from_irctc_ticket(self: Self, ticket_fp: Path, ticket_text: str, config: Configuration) -> dict:
         # Collecting:
         # 1. Date of departure
         # 2. PNR number for generating TTC ID
@@ -88,6 +87,8 @@ class Ticket:
                     f"IRCTC ticket.\nCouldn't find something in pattern no.: {i} search group from IRCTC ticket {ticket_fp}")
 
             data.update(match.groupdict())
+
+        data["event_color"] = self._color_from_ticket(ticket_text, config)
         data["departure_date"] = datetime.strptime(
             data["departure_date"], IRCTC_DATE_FORMAT
         )
@@ -96,6 +97,15 @@ class Ticket:
             "\tParsed IRCTC ticket for Date of departure, pnr, train number and seating arrangement.")
 
         return data
+
+    @staticmethod
+    def _color_from_ticket(ticket_text: str, config: Configuration) -> CalendarEventColor:
+        ticket_text = ticket_text.lower()
+        for traveller in config.traveller:
+            for name in traveller.name:
+                if len(name) <= 16 and re.search(name.replace(" ", r"\s+"), ticket_text) is not None:
+                    return traveller.color
+        return config.event_color
 
     @staticmethod
     def _get_rrh_stations_marked(data: dict, ticket_text: str, config: Configuration) -> RailRadarHandler:
