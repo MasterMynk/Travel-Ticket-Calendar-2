@@ -176,6 +176,9 @@ cache_folder="/home/<your username>/.cache/Travel Ticket Calendar/"
 ticket_folder="/home/<your username>/travels/"
 # cache_folder="C:\\Users\\<your username>\\travels\\" on Windows
 
+done_folder="/home/<your username>/travels/done/"
+# done_folder="C:\\Users\\<your username>\\travels\\done\\"
+
 log_folder="<Some Folder where logs should be stored>/" # The default value for this is None and the logs are printed to stdout in that case
 
 calendar_id="primary"
@@ -220,6 +223,7 @@ color="Grape
 * These are all the options you can configure with the configuration file
 * The first 4 keys can be used to configure the locations of your credential files
 * `ticket_folder` Specifies which folder the program will monitor
+* `done_folder` Specifies the folder in which tickets will be moved once the journey is completed. These tickets will be ignored and won't be processed on startup
 * Setting of a `log_folder` will result in the logs being put in a separate file instead of on `stdout` -- Very useful when running as a startup script
 * Logs are put in different file with names like `log_10_01_2026.txt`
 * `reminder_notification_type` can only take values `popup` or `email`
