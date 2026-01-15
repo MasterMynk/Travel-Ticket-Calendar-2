@@ -1,3 +1,4 @@
+from datetime import datetime
 from pathlib import Path
 import sys
 import time
@@ -49,8 +50,7 @@ class TicketFolderHandler(PatternMatchingEventHandler):
                 log(LogLevel.Warning, self.config,
                     f"Timeout reached but file transfer not complete. Skipping ticket '{ticket_fp}'...")
 
-    @staticmethod
-    def _process_ticket(ticket_fp: Path, gsh: GServicesHandler, model: Model, config: Configuration, to_notify: bool) -> None:
+    def _process_ticket(self: Self, ticket_fp: Path, gsh: GServicesHandler, model: Model, config: Configuration, to_notify: bool) -> None:
         log(LogLevel.Status, config, f"Processing {ticket_fp}")
 
         try:
@@ -68,7 +68,13 @@ class TicketFolderHandler(PatternMatchingEventHandler):
             if link := gsh.calendar.event_exists(ticket.ttc_id, config):
                 log(LogLevel.Status, config,
                     f"\tFound the event at {link}. Not creating it again")
-                if to_notify:
+
+                if datetime.now() > ticket.arrival:
+                    self._mark_as_done(ticket_fp, config)
+                    notify("Journey marked as Done!",
+                           f"Hope your journey from {ticket.from_where} to {ticket.to_where} was completed successfully :)", config)
+
+                elif to_notify:
                     notify("Event Already Present",
                            f"{ticket_fp} at {link}", config)
             else:
@@ -95,6 +101,15 @@ class TicketFolderHandler(PatternMatchingEventHandler):
         except Exception as error:
             log(LogLevel.Error, config,
                 "Failure to perform some Google API call. Skipping ticket...")
+
+    @staticmethod
+    def _mark_as_done(ticket_fp: Path, config: Configuration) -> None:
+        try:
+            config.done_folder.mkdir(parents=True, exist_ok=True)
+            ticket_fp.rename(config.done_folder / ticket_fp.name)
+        except Exception as error:
+            log(LogLevel.Warning, config,
+                f"Error marking {ticket_fp} as done: {error}")
 
     # The on_created event fires as soon as the file is created. This may result in the script getting an incompletely transferred file to parse resulting in parsing errors
     # Hence we are polling every file_transfer_polling_interval seconds to check if the file size of the ticket is growing or not
