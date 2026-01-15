@@ -84,7 +84,7 @@ class TicketFolderHandler(PatternMatchingEventHandler):
 
                 log(LogLevel.Status, config, "\tCreating event")
                 link = gsh.calendar.insert_event(ticket.ttc_id, ticket.summary, ticket.from_where,
-                                                 ticket.description, upload_response, ticket.departure, ticket.arrival, config)
+                                                 ticket.description, upload_response, ticket.departure, ticket.arrival, ticket.color, config)
                 log(LogLevel.Status, config, f"\tEvent created at {link}")
 
                 if to_notify:

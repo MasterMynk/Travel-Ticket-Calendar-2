@@ -2,7 +2,7 @@ from collections.abc import Iterator
 from datetime import datetime, timedelta
 import json
 import time
-from typing import Any, Callable, Self, TypedDict
+from typing import Callable, Self, TypedDict
 
 import requests
 from requests import HTTPError, RequestException

@@ -207,6 +207,14 @@ unit="hours"
 [[reminders]]
 magnitude=1
 unit="weeks"
+
+[[traveller]]
+name=["john doe", "john", "doe john"]
+color="Banana"
+
+[[traveller]]
+name="mark doe"
+color="Grape
 ```
 
 * These are all the options you can configure with the configuration file
@@ -236,5 +244,10 @@ unit="weeks"
    1. `minutes`
    1. `hours`
    1. `weeks`
+* `[[traveller]]` allows you to specify colors for different people you could possibily have tickets of
+* Each `[[traveller]]` list element must contain 2 types: `name` and `color`
+* `color` can only take types `event_color` can take
+* `name` can be a string or a list of strings specifying all the different permuatations somebody's name could appear in a ticket
+* If not specified `event_color` will be used as the event color by default
 
 * **It is NOT necessary to supply all of these fields. Fields that are not supplied will assume their default values and the above configuration file represents those defaults**

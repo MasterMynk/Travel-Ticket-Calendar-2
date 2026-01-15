@@ -5,13 +5,18 @@ from pathlib import Path
 from datetime import timedelta
 from enum import Enum
 
-from common import ReminderNotificationType, CalendarEventColor
+from common import ReminderNotificationType, CalendarEventColor, stringify_enum
 from Logger import log, LogLevel
 
 
 class TimedeltaDict(TypedDict):
     magnitude: float
     unit: str
+
+
+class TravellerDict(TypedDict):
+    name: list[str] | str
+    color: str
 
 
 class ConfigurationDict(TypedDict, total=False):
@@ -31,6 +36,7 @@ class ConfigurationDict(TypedDict, total=False):
     reminder_notification_type: str
     reminders: list[TimedeltaDict]
     event_color: str
+    traveller: list[TravellerDict]
 
     cache_data_refresh_time: TimedeltaDict
     max_retries_for_network_requests: int
@@ -40,6 +46,11 @@ class ConfigurationDict(TypedDict, total=False):
 
     ai_model: str
 
+
+@dataclass
+class Traveller:
+    name: list[str]
+    color: CalendarEventColor
 
 # This is what the consumers of this module will use
 @dataclass
@@ -58,6 +69,7 @@ class Configuration:
     reminder_notification_type: ReminderNotificationType
     reminders: list[timedelta]
     event_color: CalendarEventColor
+    traveller: list[Traveller]
 
     cache_data_refresh_time: timedelta
     max_retries_for_network_requests: int
@@ -83,17 +95,30 @@ class Configuration:
                 if to_print:
                     log(LogLevel.Status, config,
                         f"Configuring {key} -> {value}")
-                return setattr(config, key, val)
+                setattr(config, key, val)
+                pass
 
             if type(value) is type(config_attr):
                 if type(value) is list:
                     assert type(config_attr) is list
 
-                    log(LogLevel.Status, config, f"Configuring reminders...")
-                    setter(
-                        [_timedeltadict_to_timedelta(val) for val in value if _is_valid_timedeltadict(val, config)], False)
-                    log(LogLevel.Status, config,
-                        f"\tConfigured {key} -> {[str(val) for val in config_attr]}")
+                    match key:
+                        case "reminders":
+                            log(LogLevel.Status, config,
+                                f"Configuring reminders...")
+                            setter(
+                                [_timedeltadict_to_timedelta(val) for val in value if _is_valid_timedeltadict(val, config)], False)
+                            log(LogLevel.Status, config,
+                                f"\tConfigured {key} -> {[str(val) for val in getattr(config, key)]}")
+
+                        case "traveller":
+                            log(LogLevel.Status, config,
+                                f"Configuring travellers...")
+                            setter([_to_traveller(val) for val in value if _is_valid_travellerdict(
+                                val, config)], False)
+                            log(LogLevel.Status, config,
+                                f"\tConfigured {key} -> {getattr(config, key)}")
+
                 else:
                     setter(value)
 
@@ -106,7 +131,7 @@ class Configuration:
                         setter(type(config_attr)[value])
                     else:
                         log(LogLevel.Warning, config,
-                            f"Invalid value {value} for {key}. {key} can only take values: {", ".join([val.name for val in type(config_attr)])}")
+                            f"Invalid value {value} for {key}. {key} can only take values: {stringify_enum(type(config_attr))}")
                         log(LogLevel.Status, config,
                             f"Using default value: {config_attr.name}")
 
@@ -126,8 +151,17 @@ class Configuration:
 
         return config
 
+    def traveller_to_color(self: Self, name: str) -> CalendarEventColor:
+        for traveller in self.traveller:
+            if name.lower() in traveller.name:
+                return traveller.color
+        return self.event_color
+
+
 
 def _is_valid_timedeltadict(data: TimedeltaDict | dict, config: Configuration) -> bool:
+    # TODO: Add more validation here
+
     possible_units = ["days", "seconds", "microseconds",
                       "milliseconds", "minutes", "hours", "weeks"]
     is_valid = data["unit"] in possible_units
@@ -143,6 +177,39 @@ def _timedeltadict_to_timedelta(data: TimedeltaDict) -> timedelta:
     return timedelta(**{data["unit"]: data["magnitude"]})
 
 
+def _is_valid_travellerdict(data: TravellerDict, config: Configuration) -> bool:
+    if "name" not in data:
+        log(LogLevel.Warning, config,
+            f"Failure to process traveller: {data}. Each traveller must have a 'name'. See documentation.")
+        return False
+
+    if not (type(data["name"]) is str or (type(data["name"]) is list and len(data["name"]) > 0 and all(type(name) is str for name in data["name"]))):
+        log(LogLevel.Warning, config,
+            f"Failure to process traveller: {data}. Malformed 'name' attribute. 'name' must be either a string or a list of strings with atleast 1 element!")
+        return False
+
+    if "color" not in data:
+        log(LogLevel.Warning, config,
+            f"Failure to process traveller: {data}. Each traveller must have a 'color'. See documentation.")
+        return False
+
+    if type(data["color"]) is not str:
+        log(LogLevel.Warning, config,
+            f"Failure to process traveller: {data}. 'color' attribute must be of type str.")
+        return False
+
+    if not hasattr(CalendarEventColor, data["color"]):
+        log(LogLevel.Warning, config,
+            f"Failure to process traveller: {data}. 'color' attribute must be only one of: {stringify_enum(CalendarEventColor)}")
+        return False
+
+    return True
+
+
+def _to_traveller(data: TravellerDict) -> Traveller:
+    return Traveller([data["name"].lower()] if isinstance(data["name"], str) else [name.lower() for name in data["name"]], CalendarEventColor[data["color"]])
+
+
 DEFAULT_CONFIG = Configuration(
     gapi_credentials_path=Path(__file__).parent / "credentials.json",
     gapi_token_path=Path(__file__).parent / "token.json",
@@ -155,6 +222,7 @@ DEFAULT_CONFIG = Configuration(
         timedelta(weeks=1),
     ],
     event_color=CalendarEventColor.Banana,
+    traveller=[],
     cache_folder=Path.home() / ".cache/Travel Ticket Calendar/",
     cache_data_refresh_time=timedelta(weeks=1),
     rail_radar_credentials_path=Path(

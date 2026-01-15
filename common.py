@@ -1,11 +1,11 @@
-from enum import IntEnum, auto
+from enum import Enum, IntEnum, auto
 from pathlib import Path
 
 from plyer import notification
 
 from Logger import LogLevel, log
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Type
 
 if TYPE_CHECKING:
     from Configuration import Configuration
@@ -46,3 +46,7 @@ def notify(title: str, message: str, config: "Configuration") -> None:
         )
     except Exception as error:
         log(LogLevel.Warning, config, f"Failure to send notification: {error}")
+
+
+def stringify_enum(enum: Type[Enum]) -> str:
+    return ", ".join([val.name for val in enum])
