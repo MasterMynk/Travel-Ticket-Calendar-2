@@ -16,7 +16,8 @@ from common import notify
 
 class TicketFolderHandler(PatternMatchingEventHandler):
     def __init__(self: Self, config_handler: _ConfigurationHandler) -> None:
-        super().__init__(patterns=["*.pdf"], ignore_directories=True)
+        super().__init__(patterns=["*.pdf"],
+                         ignore_directories=True, ignore_patterns=[f"{config_handler.config.done_folder}/*.pdf"])
         self.config = config_handler.config
 
         try:
