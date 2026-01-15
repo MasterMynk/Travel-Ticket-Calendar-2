@@ -107,7 +107,7 @@ class Configuration:
                             log(LogLevel.Status, config,
                                 f"Configuring reminders...")
                             setter(
-                                [_timedeltadict_to_timedelta(val) for val in value if _is_valid_timedeltadict(val, config)], False)
+                                [_to_timedelta(val) for val in value if _is_valid_timedeltadict(val, config)], False)
                             log(LogLevel.Status, config,
                                 f"\tConfigured {key} -> {[str(val) for val in getattr(config, key)]}")
 
@@ -140,7 +140,7 @@ class Configuration:
                         f"This key '{key}' must not be storing a data type of string or is invalid. Please check documentation.")
 
             elif type(value) is dict and _is_valid_timedeltadict(value, config):
-                setter(_timedeltadict_to_timedelta(
+                setter(_to_timedelta(
                     cast(TimedeltaDict, value)), False)
                 log(LogLevel.Status, config,
                     f"Configured {key} -> {config_attr}")
@@ -160,20 +160,35 @@ class Configuration:
 
 
 def _is_valid_timedeltadict(data: TimedeltaDict | dict, config: Configuration) -> bool:
-    # TODO: Add more validation here
+    def error(msg: str) -> bool:
+        log(LogLevel.Warning, config,
+            f"Failure to process duration from config: {data}. {msg}")
+        return False
+
+    if "magnitude" not in data:
+        return error("'magnitude' field must be present")
+
+    if type(data["magnitude"]) is not float and type(data["magnitude"]) is not int:
+        return error("'magnitude' must be of type float/int")
+
+    if data["magnitude"] <= 0:
+        return error("'magnitude' must be positive")
+
+    if "unit" not in data:
+        return error("'unit' field must be present")
+
+    if type(data["unit"]) is not str:
+        return error("'unit' field must be of type string")
 
     possible_units = ["days", "seconds", "microseconds",
                       "milliseconds", "minutes", "hours", "weeks"]
-    is_valid = data["unit"] in possible_units
+    if data["unit"] not in possible_units:
+        return error(f"'unit' field must only be one of these: {", ".join(possible_units)}")
 
-    if not is_valid:
-        log(LogLevel.Warning, config,
-            f"Failure to process time duration set in configuration file: {data}. 'unit' field must only be one of these: {", ".join(possible_units)}")
-
-    return is_valid
+    return True
 
 
-def _timedeltadict_to_timedelta(data: TimedeltaDict) -> timedelta:
+def _to_timedelta(data: TimedeltaDict) -> timedelta:
     return timedelta(**{data["unit"]: data["magnitude"]})
 
 
