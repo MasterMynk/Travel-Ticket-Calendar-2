@@ -8,6 +8,7 @@ from Configuration import Configuration
 from GDrive import FileUploadResponse
 from GService import GService
 from Logger import LogLevel, log
+from common import CalendarEventColor
 
 
 class GCalendar(GService):
@@ -15,7 +16,7 @@ class GCalendar(GService):
         super().__init__("calendar", "v3", credentials, refresh_credentials, config)
         log(LogLevel.Status, config, "Done initializing Google Calendar API")
 
-    def insert_event(self: Self, ttc_id: str, summary: str, location: str, description: str, ticket_upload: FileUploadResponse | None, start: datetime, end: datetime, config: Configuration) -> str:
+    def insert_event(self: Self, ttc_id: str, summary: str, location: str, description: str, ticket_upload: FileUploadResponse | None, start: datetime, end: datetime, color: CalendarEventColor, config: Configuration) -> str:
         event_data = {
             "summary": summary,
             "location": location,
@@ -35,7 +36,7 @@ class GCalendar(GService):
                     } for reminder in config.reminders
                 ]
             },
-            "colorId": str(config.event_color.value),
+            "colorId": str(color.value),
             "extendedProperties": {
                 "private": {
                     "ttc_id": ttc_id

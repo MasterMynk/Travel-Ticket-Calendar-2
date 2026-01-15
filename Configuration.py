@@ -151,6 +151,13 @@ class Configuration:
 
         return config
 
+    def traveller_to_color(self: Self, name: str) -> CalendarEventColor:
+        for traveller in self.traveller:
+            if name.lower() in traveller.name:
+                return traveller.color
+        return self.event_color
+
+
 
 def _is_valid_timedeltadict(data: TimedeltaDict | dict, config: Configuration) -> bool:
     # TODO: Add more validation here
@@ -200,7 +207,7 @@ def _is_valid_travellerdict(data: TravellerDict, config: Configuration) -> bool:
 
 
 def _to_traveller(data: TravellerDict) -> Traveller:
-    return Traveller([data["name"]] if isinstance(data["name"], str) else data["name"], CalendarEventColor[data["color"]])
+    return Traveller([data["name"].lower()] if isinstance(data["name"], str) else [name.lower() for name in data["name"]], CalendarEventColor[data["color"]])
 
 
 DEFAULT_CONFIG = Configuration(

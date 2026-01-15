@@ -3,6 +3,8 @@ from dataclasses import dataclass
 from datetime import datetime
 from enum import IntEnum, auto
 
+from common import CalendarEventColor
+
 
 @dataclass
 class TravelDataField:
@@ -23,3 +25,4 @@ class TravelData:
     departure: TravelDataField
     arrival: TravelDataField
     ttc_id: str
+    event_color: CalendarEventColor

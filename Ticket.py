@@ -11,6 +11,7 @@ from Configuration import Configuration
 from Logger import LogLevel, log
 from RailRadarHandler import RailRadarHandler
 from TravelData import TravelData, TravelDataField, TravelType
+from common import CalendarEventColor
 
 
 class Ticket:
@@ -58,6 +59,7 @@ class Ticket:
                 rrh.arrival_datetime
             ),
             ttc_id=data["pnr"],
+            event_color=config.event_color,
         )
 
     @staticmethod
@@ -146,6 +148,7 @@ REQUIRED FIELDS:
   "ttc_id": "PNR/Booking Reference/Confirmation Number with PNR having the highest priority",
   "travel_type": "Flight|Train|Bus",
   "description": "airline/railway/bus company name\\nflight/train number\\nseat/coach/berth number if available",
+  "traveller": "Full name without any honorific (like Mr., Mrs., etc.) of the first passenger that appears in the ticket",
 }
 
 LOCATION FORMATTING RULES:
@@ -172,10 +175,11 @@ EXTRACTION STRATEGY:
 
         return TravelData(
             TravelType[response["travel_type"]],
-            response["description"],
+            f"{response["traveller"]}\n{response["description"]}",
             TravelDataField(**response["departure"]),
             TravelDataField(**response["arrival"]),
-            response["ttc_id"]
+            response["ttc_id"],
+            config.traveller_to_color(response["traveller"]),
         )
 
     @property
@@ -205,3 +209,7 @@ EXTRACTION STRATEGY:
     @property
     def arrival(self: Self) -> datetime:
         return self._data.arrival.when
+
+    @property
+    def color(self: Self) -> CalendarEventColor:
+        return self._data.event_color
