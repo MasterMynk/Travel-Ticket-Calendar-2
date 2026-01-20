@@ -72,7 +72,7 @@ class TicketFolderHandler(PatternMatchingEventHandler):
                 if datetime.now() > ticket.arrival:
                     self._mark_as_done(ticket_fp, config)
                     notify("Journey marked as Done!",
-                           f"Hope your journey from {ticket.from_where} to {ticket.to_where} was completed successfully :)", config)
+                           f"Hope your journey from {ticket.from_where} to {ticket.to_where} was successful :)", config)
 
                 elif to_notify:
                     notify("Event Already Present",
