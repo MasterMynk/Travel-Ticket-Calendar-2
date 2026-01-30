@@ -9,6 +9,8 @@ from watchdog.events import DirCreatedEvent, FileCreatedEvent, PatternMatchingEv
 from AiModelHandler import Model
 from Configuration import Configuration
 from ConfigurationHandler import _ConfigurationHandler
+from GCalendar import Event
+from GDrive import GDrive
 from GServicesHandler import GServicesHandler
 from Logger import LogLevel, log
 from Ticket import Ticket
@@ -65,18 +67,18 @@ class TicketFolderHandler(PatternMatchingEventHandler):
             return
 
         try:
-            if link := gsh.calendar.event_exists(ticket.ttc_id, config):
+            if (event := gsh.calendar.event_exists(ticket.ttc_id, config)) is not None:
                 log(LogLevel.Status, config,
-                    f"\tFound the event at {link}. Not creating it again")
+                    f"\tFound the event at {event["link"]}. Not creating it again")
 
                 if datetime.now() > ticket.arrival:
-                    self._mark_as_done(ticket_fp, config)
+                    self._mark_as_done(ticket_fp, gsh.drive, event, config)
                     notify("Journey marked as Done!",
                            f"Hope your journey from {ticket.from_where} to {ticket.to_where} was successful :)", config)
 
                 elif to_notify:
                     notify("Event Already Present",
-                           f"{ticket_fp} at {link}", config)
+                           f"{ticket_fp} at {event["link"]}", config)
             else:
                 log(LogLevel.Status, config,
                     f"\tUploading {ticket_fp} to Google Drive")
@@ -103,8 +105,10 @@ class TicketFolderHandler(PatternMatchingEventHandler):
                 "Failure to perform some Google API call. Skipping ticket...")
 
     @staticmethod
-    def _mark_as_done(ticket_fp: Path, config: Configuration) -> None:
+    def _mark_as_done(ticket_fp: Path, drive: GDrive, event: Event, config: Configuration) -> None:
         try:
+            if event["ticket_file_id"] is not None:
+                drive.trash(event["ticket_file_id"], config)
             config.done_folder.mkdir(parents=True, exist_ok=True)
             ticket_fp.rename(config.done_folder / ticket_fp.name)
         except Exception as error:

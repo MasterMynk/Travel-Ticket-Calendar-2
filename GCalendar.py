@@ -1,4 +1,4 @@
-from typing import Callable, Self
+from typing import Callable, Self, TypedDict
 from datetime import datetime
 
 from google.oauth2.credentials import Credentials
@@ -9,6 +9,11 @@ from GDrive import FileUploadResponse
 from GService import GService
 from Logger import LogLevel, log
 from common import CalendarEventColor
+
+
+class Event(TypedDict):
+    link: str
+    ticket_file_id: str | None
 
 
 class GCalendar(GService):
@@ -59,7 +64,7 @@ class GCalendar(GService):
             .execute(), config
         )["htmlLink"]
 
-    def event_exists(self: Self, ttc_id: str, config: Configuration) -> str | None:
+    def event_exists(self: Self, ttc_id: str, config: Configuration) -> Event | None:
         found_events = self._perform_gapi_call(
             lambda: self._service.events()
             .list(
@@ -71,4 +76,7 @@ class GCalendar(GService):
         )["items"]
 
         if len(found_events) > 0:
-            return found_events[0]["htmlLink"]
+            return {
+                "link": found_events[0]["htmlLink"],
+                "ticket_file_id": found_events[0].get("attachments", [{"fileId": None}])[0]["fileId"]
+            }

@@ -52,3 +52,9 @@ class GDrive(GService):
             )
         except:
             return None
+
+    def trash(self: Self, file_id: str, config: Configuration) -> None:
+        self._perform_gapi_call(
+            lambda: self._service.files().update(
+                fileId=file_id, body={"trashed": True}).execute(), config
+        )
