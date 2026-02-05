@@ -10,6 +10,7 @@ from typing import TYPE_CHECKING, Type
 if TYPE_CHECKING:
     from Configuration import Configuration
 
+
 class ReminderNotificationType(IntEnum):
     popup = auto()
     email = auto()
@@ -31,6 +32,7 @@ class CalendarEventColor(IntEnum):
 
 SCOPES = ["https://www.googleapis.com/auth/calendar.events.owned",
           "https://www.googleapis.com/auth/drive.file"]
+
 
 CONFIGURATION_FOLDER = Path.home() / ".config/Travel Ticket Calendar"
 

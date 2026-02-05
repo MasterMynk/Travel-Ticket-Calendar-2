@@ -7,6 +7,7 @@ from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from Configuration import Configuration
 
+
 class LogLevel(IntEnum):
     Status = auto()
     Warning = auto()

@@ -23,6 +23,8 @@ class TicketFolderHandler(PatternMatchingEventHandler):
                          ignore_directories=True, ignore_patterns=[f"{config_handler.config.done_folder}/*.pdf"])
         self.config = config_handler.config
 
+        self.last_processed: Path | None = None
+
         try:
             self._gsh = GServicesHandler(self.config)
         except Exception as error:
@@ -39,13 +41,21 @@ class TicketFolderHandler(PatternMatchingEventHandler):
     def on_created(self: Self, event: DirCreatedEvent | FileCreatedEvent) -> None:
         if isinstance(event.src_path, str):
             ticket_fp = Path(event.src_path)
+
+            # If this is a duplicate event
+            if self.last_processed and self.last_processed == ticket_fp:
+                log(LogLevel.Status, self.config,
+                    f"Identified duplicate event. Not processing {ticket_fp}")
+                return
+
+            self.last_processed = ticket_fp
+
             if self._wait_for_transfer_completion(ticket_fp, self.config):
                 notify("Detected New Ticket",
                        f"Processing {event.src_path}", self.config)
 
                 self._process_ticket(ticket_fp, self._gsh,
                                      self._model, self.config, True)
-
             else:
                 notify("Skipping Ticket",
                        f"{event.src_path} due to timeout", self.config)
