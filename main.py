@@ -1,12 +1,16 @@
 from datetime import datetime
+from pathlib import Path
 import sys
 
 from Configuration import Configuration
-from ConfigurationHandler import handler as config_handler
+from ConfigurationHandler import ConfigurationHandler
 from Logger import LogLevel, log
+from termOptionsParser import termOptionsParser
 from TicketFolderHandler import TicketFolderHandler
 
 from watchdog.observers import Observer
+
+from common import OPTIONS, shorthand_for
 
 
 def cache_cleanup(config: Configuration) -> None:
@@ -18,7 +22,17 @@ def cache_cleanup(config: Configuration) -> None:
         log(LogLevel.Warning, config,
             f"Failure to cleanup outdated cache file: {error}")
 
+
 def main() -> None:
+    term_config_dict, config_path = termOptionsParser(
+        OPTIONS, {
+            shorthand_for(option): option for option in OPTIONS
+        }, sys.argv
+    )
+
+    config_handler = ConfigurationHandler(term_config_dict,
+                                          Path(config_path)) if config_path else ConfigurationHandler(term_config_dict)
+
     cache_cleanup(config_handler.config)
 
     observer = Observer()
