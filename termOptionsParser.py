@@ -58,6 +58,7 @@ def termOptionsParser(shorthands: dict[str, Option], argv: list[str]) -> tuple[C
                     parsed_options.update(
                         [arg_option, shorthands[arg_option].long_name])
                     # arg_option must contain the full option name at the end
+                    arg_shorthand = arg_option
                     arg_option = shorthands[arg_option].long_name
 
                 case 2:
@@ -66,6 +67,7 @@ def termOptionsParser(shorthands: dict[str, Option], argv: list[str]) -> tuple[C
                             f"Unrecognized option: {arg}. Exiting...")
                     parsed_options.update(
                         [arg_option, shorthand_for(arg_option)])
+                    arg_shorthand = shorthand_for(arg_option)
 
                 case _:
                     raise Exception(
@@ -78,7 +80,7 @@ def termOptionsParser(shorthands: dict[str, Option], argv: list[str]) -> tuple[C
                 config_path = option_value[1]
             else:
                 result[_option_to_config_dict_key(
-                    arg_option)] = shorthands[shorthand_for(arg_option)].type_fn(option_value[1])
+                    arg_option)] = shorthands[arg_shorthand].type_fn(option_value[1])
 
         elif i != 0:  # First argument can be the script name
             raise Exception(

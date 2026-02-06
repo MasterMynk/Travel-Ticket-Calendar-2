@@ -27,8 +27,8 @@ def cache_cleanup(config: Configuration) -> None:
 def main() -> None:
     try:
         term_config_dict, config_path = termOptionsParser(
-            {shorthand_for(option): Option(option, type_fn)
-             for option, type_fn in OPTIONS.items()}, sys.argv
+            {shorthand_for(option.long_name): option
+             for option in OPTIONS}, sys.argv
         )
     except Exception as e:
         log(LogLevel.Error, DEFAULT_CONFIG, e)

@@ -9,6 +9,8 @@ from Logger import LogLevel, log
 
 from typing import TYPE_CHECKING, Type
 
+from Option import Option
+
 if TYPE_CHECKING:
     from Configuration import Configuration
 
@@ -38,22 +40,22 @@ SCOPES = ["https://www.googleapis.com/auth/calendar.events.owned",
 
 CONFIGURATION_FOLDER = Path.home() / ".config/Travel Ticket Calendar"
 
-OPTIONS = {
-    "config-path": str,
-    "gapi-credentials-path": str,
-    "gapi-token-path": str,
-    "rail-radar-credentials-path": str,
-    "ai-model-credentials-path": str,
-    "cache-folder": str,
-    "ticket-folder": str,
-    "done-folder": str,
-    "log-folder": str,
-    "calendar-id": str,
-    "reminder-notification-type": str,
-    "event-color": str,
-    "ai-model": str,
-    "max-retries-for-network-requests": int,
-}
+OPTIONS = (
+    Option("config-path"),
+    Option("gapi-credentials-path"),
+    Option("gapi-token-path"),
+    Option("rail-radar-credentials-path"),
+    Option("ai-model-credentials-path"),
+    Option("cache-folder"),
+    Option("ticket-folder"),
+    Option("done-folder"),
+    Option("log-folder"),
+    Option("calendar-id"),
+    Option("reminder-notification-type"),
+    Option("event-color"),
+    Option("ai-model"),
+    Option("max-retries-for-network-requests", int),
+)
 
 
 def calculate_backoff(attempt: int) -> float:
