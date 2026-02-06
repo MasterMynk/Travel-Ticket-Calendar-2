@@ -2,9 +2,10 @@ from datetime import datetime
 from pathlib import Path
 import sys
 
-from Configuration import Configuration
+from Configuration import DEFAULT_CONFIG, Configuration
 from ConfigurationHandler import ConfigurationHandler
 from Logger import LogLevel, log
+from Option import Option
 from termOptionsParser import termOptionsParser
 from TicketFolderHandler import TicketFolderHandler
 
@@ -24,11 +25,14 @@ def cache_cleanup(config: Configuration) -> None:
 
 
 def main() -> None:
-    term_config_dict, config_path = termOptionsParser(
-        OPTIONS, {
-            shorthand_for(option): option for option in OPTIONS
-        }, sys.argv
-    )
+    try:
+        term_config_dict, config_path = termOptionsParser(
+            {shorthand_for(option): Option(option, type_fn)
+             for option, type_fn in OPTIONS.items()}, sys.argv
+        )
+    except Exception as e:
+        log(LogLevel.Error, DEFAULT_CONFIG, e)
+        sys.exit(-1)
 
     config_handler = ConfigurationHandler(term_config_dict,
                                           Path(config_path)) if config_path else ConfigurationHandler(term_config_dict)

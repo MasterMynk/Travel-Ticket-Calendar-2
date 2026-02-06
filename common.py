@@ -38,8 +38,22 @@ SCOPES = ["https://www.googleapis.com/auth/calendar.events.owned",
 
 CONFIGURATION_FOLDER = Path.home() / ".config/Travel Ticket Calendar"
 
-OPTIONS = {"config-path", "gapi-credentials-path", "gapi-token-path", "rail-radar-credentials-path", "ai-model-credentials-path", "cache-folder",
-           "ticket-folder", "done-folder", "log-folder", "calendar-id", "reminder-notification-type", "event-color", "ai-model"}
+OPTIONS = {
+    "config-path": str,
+    "gapi-credentials-path": str,
+    "gapi-token-path": str,
+    "rail-radar-credentials-path": str,
+    "ai-model-credentials-path": str,
+    "cache-folder": str,
+    "ticket-folder": str,
+    "done-folder": str,
+    "log-folder": str,
+    "calendar-id": str,
+    "reminder-notification-type": str,
+    "event-color": str,
+    "ai-model": str,
+    "max-retries-for-network-requests": int,
+}
 
 
 def calculate_backoff(attempt: int) -> float:
