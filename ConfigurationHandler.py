@@ -9,7 +9,13 @@ from Configuration import Configuration, ConfigurationDict, DEFAULT_CONFIG
 
 
 class ConfigurationHandler:
-    def __init__(self: Self, term_config_dict: ConfigurationDict, config_fp: Path = CONFIGURATION_FOLDER / "config.toml") -> None:
+    def __init__(self: Self, term_config_dict: ConfigurationDict, config_fp: Path | None = CONFIGURATION_FOLDER / "config.toml") -> None:
+        if config_fp is None:
+            self.config = Configuration.from_config_dict(term_config_dict)
+            log(LogLevel.Status, self.config,
+                "config-path specified as default. Using default config with the above changes")
+            return
+
         self.config = self._load(config_fp, term_config_dict)
 
     def _load(self: Self, config_fp: Path, term_config_dict: ConfigurationDict) -> Configuration:

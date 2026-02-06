@@ -35,7 +35,7 @@ def main() -> None:
         sys.exit(-1)
 
     config_handler = ConfigurationHandler(term_config_dict,
-                                          Path(config_path)) if config_path else ConfigurationHandler(term_config_dict)
+                                          None if config_path == "default" else Path(config_path)) if config_path else ConfigurationHandler(term_config_dict)
 
     cache_cleanup(config_handler.config)
 
