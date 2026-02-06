@@ -2,33 +2,33 @@
 
 A program that automatically adds your flight/train/bus ticket as an event to your Google Calendar:
 
--   Runs in the background watching a folder.
--   When a ticket PDF is added to the folder the program scans it and uploads it to your Google Calendar
--  Sends a notification to your system to indicate success/failure
+- Runs in the background watching a folder.
+- When a ticket PDF is added to the folder the program scans it and uploads it to your Google Calendar
+- Sends a notification to your system to indicate success/failure
 
 ## Table of Contents
 
 1. [Improvements and reason for rewrite](#improvements-over-previous-attempt-and-why-the-re-write)
 2. [Setup](#setup)
-   1. [Clone the repo](#1-clone-the-repo)
-   2. [Install Dependencies](#2-install-dependencies)
-   3. [Purpose of different APIs used in this project](#3-identify-required-apiscredentials)
-   4. [Cloud Console setup](#4-google-cloud-console-setup-for-calendar-and-drive-api)
-   5. [Google AI Studio setup](#5-google-ai-studio-setup)
-   6. [RailRadar setup](#6-railradar-api-setup)
-3. [Usage](#usage--configuration)
+    1. [Clone the repo](#1-clone-the-repo)
+    2. [Install Dependencies](#2-install-dependencies)
+    3. [Purpose of different APIs used in this project](#3-identify-required-apiscredentials)
+    4. [Cloud Console setup](#4-google-cloud-console-setup-for-calendar-and-drive-api)
+    5. [Google AI Studio setup](#5-google-ai-studio-setup)
+    6. [RailRadar setup](#6-railradar-api-setup)
+    7. [Usage](#usage--configuration)
 
 ## Improvements over previous attempt and why the re-write
 
-* **Ease of use improvements:** The script now watches a folder, detects an addition and automatically uploads it to the calendar. NO manual intervention needed. You just get a cute notification on your system when the ticket is parsed and uploaded
-* **Versatility improvements:** Can handle any type of ticket (bus/flight/train) thrown at it due to integration with Gemini
-* **Robustness improvements:** Handles many different types of errors effectively. Knowing when to let go of something and knowing when to quit instead of constantly nagging you till the procedure is complete like the last version did
-* **Codebase improvements:** Much more maintainable and hierarchial code as compared to v1. Highly object oriented with almost every class receiving its own dedicated module
+- **Ease of use improvements:** The script now watches a folder, detects an addition and automatically uploads it to the calendar. NO manual intervention needed. You just get a cute notification on your system when the ticket is parsed and uploaded
+- **Versatility improvements:** Can handle any type of ticket (bus/flight/train) thrown at it due to integration with Gemini
+- **Robustness improvements:** Handles many different types of errors effectively. Knowing when to let go of something and knowing when to quit instead of constantly nagging you till the procedure is complete like the last version did
+- **Codebase improvements:** Much more maintainable and hierarchial code as compared to v1. Highly object oriented with almost every class receiving its own dedicated module
 
-* **Why the rewrite?**
-   * The codebsae of v1 was highly unmaintainable; New features would take unreasonable effort to add.
-   * Interactions with v1 were very clunky and not streamlined; Having to supply details through the commandline is a very poor design
-   * Limited set of tickets could be parsed; For each new ticket encounted I'd have to painstakingly add a new parser
+- **Why the rewrite?**
+    - The codebsae of v1 was highly unmaintainable; New features would take unreasonable effort to add.
+    - Interactions with v1 were very clunky and not streamlined; Having to supply details through the command-line is a very poor design
+    - Limited set of tickets could be parsed; For each new ticket encounted I'd have to painstakingly add a new parser
 
 # Setup
 
@@ -48,11 +48,12 @@ pip install -r requirements.txt
 ```
 
 **Dependencies:**
-   1. Google libraries for Google APIs and Google Gemini
-   2. `pypdf` for reading IRCTC tickets
-   3. `requests` for RailRadar API
-   4. `watchdog` for efficient system-level folder monitoring
-   5. `plyer` to send notifications
+
+1. Google libraries for Google APIs and Google Gemini
+2. `pypdf` for reading IRCTC tickets
+3. `requests` for RailRadar API
+4. `watchdog` for efficient system-level folder monitoring
+5. `plyer` to send notifications
 
 ## 3. Identify Required APIs/Credentials
 
@@ -66,7 +67,6 @@ pip install -r requirements.txt
 
 1. Go to [Google Cloud Console](https://console.cloud.google.com).
 2. **Create a new project:**
-
     1. Click on `Select a project` or `<name of your previous project>` in the top left corner.
        ![Screenshot](readme_assets/select_a_project.jpg)
     2. In the modal window that opens click `New Project`
@@ -78,20 +78,17 @@ pip install -r requirements.txt
        ![Screenshot visually showing the indicator of the created project being selected](readme_assets/project_selected.jpg)
 
 3. **Enable Google Calendar API:**
-
     1. In the search bar search for `calendar api`, click on the [first option](https://console.cloud.google.com/flows/enableapi?apiid=calendar-json.googleapis.com)
        ![Screenshot](readme_assets/google_calendar_api.jpg)
     2. Then on `Enable` to enable the API
        ![Screenshot](readme_assets/enable_calendar_api.jpg)
 
 4. **Enable Google Drive API:**
-
     1. Go back and search for `google drive api`, click on the [first option](https://console.cloud.google.com/flows/enableapi?apiid=drive.googleapis.com)
     2. Now click on `Enable` to enable it.
        ![Screenshot](readme_assets/enable_google_drive.jpg)
 
 5. **Setup OAuth consent screen:**
-
     1. Go back and search for `OAuth consent screen` and on the [first option](https://console.cloud.google.com/apis/credentials/consent)
     2. Click on `Get Started`
        ![Screenshot](readme_assets/oauth_get_started.jpg)
@@ -120,7 +117,7 @@ pip install -r requirements.txt
     16. Verify if your account is added as a test user
         ![Screenshot](readme_assets/verify_test_user_added.jpg)
 
--   **Do NOT share your `credentials.json` or `token.json` file (generated after running the script for the first time and logging in) with anyone**
+- **Do NOT share your `credentials.json` or `token.json` file (generated after running the script for the first time and logging in) with anyone**
 
 ## 5. Google AI Studio Setup
 
@@ -151,16 +148,17 @@ pip install -r requirements.txt
 ```
 
 # Usage & Configuration
-* After the setup running the program is as simple as running the following commands from within the project directory
+
+- After the setup running the program is as simple as running the following commands from within the project directory
 
 ```bash
 source venv/bin/activate
 python ./main.py
 ```
 
-* The program then runs indefinitely unless terminated by pressing `Ctrl+C` or some other way
+- The program then runs indefinitely unless terminated by pressing `Ctrl+C` or some other way
 
-* To configure the program a `config.toml` file can be provided which the program will look for upon startup in `~/.config/Travel Ticket Calendar/`
+- To configure the program a `config.toml` file can be provided which the program will look for upon startup in `~/.config/Travel Ticket Calendar/`
 
 ```toml
 # $HOME/.config/Travel Ticket Calendar/config.toml
@@ -220,38 +218,73 @@ name="mark doe"
 color="Grape
 ```
 
-* These are all the options you can configure with the configuration file
-* The first 4 keys can be used to configure the locations of your credential files
-* `ticket_folder` Specifies which folder the program will monitor
-* `done_folder` Specifies the folder in which tickets will be moved once the journey is completed. These tickets will be ignored and won't be processed on startup
-* Setting of a `log_folder` will result in the logs being put in a separate file instead of on `stdout` -- Very useful when running as a startup script
-* Logs are put in different file with names like `log_10_01_2026.txt`
-* `reminder_notification_type` can only take values `popup` or `email`
-* `event_color` can only take values:
-   1. `Lavendar`
-   1. `Sage`
-   1. `Grape`
-   1. `Flamingo`
-   1. `Banana`
-   1. `Tangerine`
-   1. `Peacock`
-   1. `Graphite`
-   1. `Blueberry`
-   1. `Basil`
-   1. `Tomato`
-* `[[reminders]]` can be added as many times as you like and will determine the reminders to attach to the Google Event
-* The `unit` field of a reminder can only take units:
-   1. `days`
-   1. `seconds`
-   1. `microseconds`
-   1. `milliseconds`
-   1. `minutes`
-   1. `hours`
-   1. `weeks`
-* `[[traveller]]` allows you to specify colors for different people you could possibily have tickets of
-* Each `[[traveller]]` list element must contain 2 types: `name` and `color`
-* `color` can only take types `event_color` can take
-* `name` can be a string or a list of strings specifying all the different permuatations somebody's name could appear in a ticket
-* If not specified `event_color` will be used as the event color by default
+- These are all the options you can configure with the configuration file
+- The first 4 keys can be used to configure the locations of your credential files
+- `ticket_folder` Specifies which folder the program will monitor
+- `done_folder` Specifies the folder in which tickets will be moved once the journey is completed. These tickets will be ignored and won't be processed on startup
+- Setting of a `log_folder` will result in the logs being put in a separate file instead of on `stdout` -- Very useful when running as a startup script
+- Logs are put in different file with names like `log_10_01_2026.txt`
+- `reminder_notification_type` can only take values `popup` or `email`
+- `event_color` can only take values:
+    1. `Lavendar`
+    1. `Sage`
+    1. `Grape`
+    1. `Flamingo`
+    1. `Banana`
+    1. `Tangerine`
+    1. `Peacock`
+    1. `Graphite`
+    1. `Blueberry`
+    1. `Basil`
+    1. `Tomato`
+- `[[reminders]]` can be added as many times as you like and will determine the reminders to attach to the Google Event
+- The `unit` field of a reminder can only take units:
+    1. `days`
+    1. `seconds`
+    1. `microseconds`
+    1. `milliseconds`
+    1. `minutes`
+    1. `hours`
+    1. `weeks`
+- `[[traveller]]` allows you to specify colors for different people you could possibily have tickets of
+- Each `[[traveller]]` list element must contain 2 types: `name` and `color`
+- `color` can only take types `event_color` can take
+- `name` can be a string or a list of strings specifying all the different permuatations somebody's name could appear in a ticket
+- If not specified `event_color` will be used as the event color by default
 
-* **It is NOT necessary to supply all of these fields. Fields that are not supplied will assume their default values and the above configuration file represents those defaults**
+- **It is NOT necessary to supply all of these fields. Fields that are not supplied will assume their default values and the above configuration file represents those defaults**
+
+## Command-line options for configuration
+
+- All single valued options that can be specifed in the `TOML` file can be passed as command-line arguments
+- Each argument can be specified in the following 4 ways:
+    1. `--long-name=value`
+    2. `--long-name value`
+    3. `-ln=value`
+    4. `--ln value`
+- Here's a comprehensive list of all options available:
+    1. `--config-path` or `-cp`
+    1. `--gapi-credentials-path` or `-gcp`
+    1. `--gapi-token-path` or `-gtp`
+    1. `--rail-radar-credentials-path` or `-rrcp`
+    1. `--ai-model-credentials-path` or `-amcp`
+    1. `--cache-folder` or `-cf`
+    1. `--ticket-folder` or `-tf`
+    1. `--done-folder` or `-df`
+    1. `--log-folder` or `-lf`
+    1. `--calendar-id` or `-ci`
+    1. `--reminder-notification-type` or `-rnt`
+    1. `--event-color` or `-ec`
+    1. `--max-retries-for-network-requests` or `-mrfnr`
+    1. `--ai-model` or `-am`
+- `--config-path` or `-cp` option is used to specify the path to the `TOML` configuration file
+- Any option specified through the command-line has precedence over same configuration made in the supplied `TOML` file
+- `--config-path` or `-cp` can also take a special value `default` which then doesn't use any `TOML` file for configuration but only uses configuration options specified in the command-line
+- The naming is the same as the options availble in `TOML` file except instead of underscores hyphens are used as word separators
+- Short name of each field is simply the first letter of each word without any hyphens
+
+- Example:
+
+```bash
+python ./main.py --ticket-folder /home/mayank/test -cp=default -gcp /home/mayank/credentials.json -mrfnr=2 --reminder-notification-type="popup"
+```
