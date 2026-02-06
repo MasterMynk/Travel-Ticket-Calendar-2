@@ -68,6 +68,7 @@ class RailRadarHandler:
                 timedelta(days=days_of_travel, minutes=minute_of_arrival)
 
             # Quick and dirty fix for a rail radar api issue I faced with train number 12919
+            # TODO: Remove this fix when the issue is resolved from RailRadar side
             if self.departure_datetime:
                 while self.arrival_datetime < self.departure_datetime:
                     self.arrival_datetime += timedelta(days=1)

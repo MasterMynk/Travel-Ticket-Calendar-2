@@ -5,7 +5,6 @@ import sys
 from Configuration import DEFAULT_CONFIG, Configuration
 from ConfigurationHandler import ConfigurationHandler
 from Logger import LogLevel, log
-from Option import Option
 from termOptionsParser import termOptionsParser
 from TicketFolderHandler import TicketFolderHandler
 

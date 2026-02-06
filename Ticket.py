@@ -76,7 +76,6 @@ class Ticket:
         ]
         IRCTC_DATE_FORMAT = "%d-%b-%Y"
 
-
         data = {}
         for i, pattern in enumerate(PATTERNS, 1):
             match = re.search(pattern, ticket_text,

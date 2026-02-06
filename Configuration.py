@@ -54,6 +54,8 @@ class Traveller:
     color: CalendarEventColor
 
 # This is what the consumers of this module will use
+
+
 @dataclass
 class Configuration:
     gapi_credentials_path: Path
@@ -158,7 +160,6 @@ class Configuration:
             if name.lower() in traveller.name:
                 return traveller.color
         return self.event_color
-
 
 
 def _is_valid_timedeltadict(data: TimedeltaDict | dict, config: Configuration) -> bool:
