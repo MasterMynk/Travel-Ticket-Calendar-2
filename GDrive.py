@@ -11,6 +11,7 @@ from GService import GService
 
 from Logger import log, LogLevel
 
+
 @dataclass
 class FileUploadResponse:
     id: str

@@ -8,7 +8,7 @@ from watchdog.events import DirCreatedEvent, FileCreatedEvent, PatternMatchingEv
 
 from AiModelHandler import Model
 from Configuration import Configuration
-from ConfigurationHandler import _ConfigurationHandler
+from ConfigurationHandler import ConfigurationHandler
 from GCalendar import Event
 from GDrive import GDrive
 from GServicesHandler import GServicesHandler
@@ -18,7 +18,7 @@ from common import notify
 
 
 class TicketFolderHandler(PatternMatchingEventHandler):
-    def __init__(self: Self, config_handler: _ConfigurationHandler) -> None:
+    def __init__(self: Self, config_handler: ConfigurationHandler) -> None:
         super().__init__(patterns=["*.pdf"],
                          ignore_directories=True, ignore_patterns=[f"{config_handler.config.done_folder}/*.pdf"])
         self.config = config_handler.config
