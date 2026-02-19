@@ -1,4 +1,5 @@
 import copy
+import sys
 from typing import Self, TypedDict, cast
 from dataclasses import dataclass
 from pathlib import Path
@@ -229,8 +230,9 @@ def _to_traveller(data: TravellerDict) -> Traveller:
 
 
 DEFAULT_CONFIG = Configuration(
-    gapi_credentials_path=Path(__file__).parent.parent / "config" / "credentials.json",
-    gapi_token_path=Path(__file__).parent.parent / "config" / "token.json",
+    gapi_credentials_path=Path(
+        sys.argv[0]).parent / "credentials/credentials.json",
+    gapi_token_path=Path(sys.argv[0]).parent / "credentials/token.json",
     log_folder=None,
     calendar_id="primary",
     reminder_notification_type=ReminderNotificationType.popup,
@@ -244,9 +246,9 @@ DEFAULT_CONFIG = Configuration(
     cache_folder=Path.home() / ".cache/Travel Ticket Calendar/",
     cache_data_refresh_time=timedelta(weeks=1),
     rail_radar_credentials_path=Path(
-        __file__).parent.parent / "config" / "rail_radar_credentials.json",
+        sys.argv[0]).parent / "credentials/rail_radar_credentials.json",
     ai_model_credentials_path=Path(
-        __file__).parent.parent / "config" / "gemini_credentials.json",
+        sys.argv[0]).parent / "credentials/gemini_credentials.json",
     ticket_folder=Path.home() / "travels/",
     done_folder=Path.home() / "travels/done/",
     configuration_folder=Path.home() / ".config/Travel Ticket Calendar/",

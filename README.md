@@ -103,7 +103,7 @@ pip install -r requirements.txt
     7. In the following screen choose `Desktop app` as the `Application type` and give it a name that you like
     8. Then click on `Create`
        ![Screenshot](readme_assets/desktop_app.jpg)
-    9. In the modal window that pops up click on `Download JSON` and save the file as `credentials.json` into the `Travel-Ticket-Calendar-2` project folder you git cloned earlier
+    9. In the modal window that pops up click on `Download JSON` and save the file as `credentials/credentials.json` into the `Travel-Ticket-Calendar-2` project folder you git cloned earlier
        ![Screenshot](readme_assets/download_json.jpg)
     10. Go to `Data Access` section present on the left panel
     11. Click on `Add or remove scopes` and add `https://www.googleapis.com/auth/calendar.events.owned` and `https://www.googleapis.com/auth/drive.file` and click on `Update`
@@ -130,7 +130,7 @@ pip install -r requirements.txt
    ![Screenshot](readme_assets/select_project.jpg)
 5. Click on `Create key` and your key is generated
    ![Screenshot](readme_assets/create_key_final.jpg)
-6. Now create a file called `gemini_credentials.json` in `Travel-Ticket-Calendar-2` folder and paste the key in there in this format
+6. Now create a file called `credentials/gemini_credentials.json` in `Travel-Ticket-Calendar-2` folder and paste the key in there in this format
 
 ```json
 { "api_key": "AIzaSyC6Doa9ho9aSAGNlePTY7psS1kPw-f6bXo" }
@@ -141,7 +141,7 @@ pip install -r requirements.txt
 1. Go to [RailRadar website](https://railradar.in/)
 2. Sign up for an account
 3. Verify the account through an email they should send you after sign up
-4. Create a file called `rail_radar_credentials.json` in `Travel-Ticket-Calendar-2` folder and paste the key in there in this format
+4. Create a file called `credentials/rail_radar_credentials.json` in `Travel-Ticket-Calendar-2` folder and paste the key in there in this format
 
 ```json
 { "X-API-Key": "rr_fc7daqttoc3sjmcfag8xveeq6yo8aqpj" }
@@ -163,10 +163,10 @@ python ./main.py
 ```toml
 # $HOME/.config/Travel Ticket Calendar/config.toml
 
-gapi_credentials_path="<Folder containing main.py that you're running>/credentials.json"
-gapi_token_path="<Folder containing main.py>/token.json"
-rail_radar_credentials_path="<Folder containing main.py>/rail_radar_credentials.json"
-ai_model_credentials_path="<Folder containing main.py>/gemini_credentials.json"
+gapi_credentials_path="<Folder containing main.py that you're running>/credentials/credentials.json"
+gapi_token_path="<Folder containing main.py>/credentials/token.json"
+rail_radar_credentials_path="<Folder containing main.py>/credentials/rail_radar_credentials.json"
+ai_model_credentials_path="<Folder containing main.py>/credentials/gemini_credentials.json"
 
 cache_folder="/home/<your username>/.cache/Travel Ticket Calendar/"
 # cache_folder="C:\\Users\\<your username>\\.cache\\Travel Ticket Calendar\\" on Windows
