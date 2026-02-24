@@ -8,9 +8,12 @@ from src.misc.Logger import LogLevel, log
 
 class IndexHandler:
     def __init__(self: Self, config: Configuration) -> None:
-        self._data = {}
+        self._data: dict[str, str] = {}
         self._config = config
         self._output_path = self._config.cache_folder / "index.json"
+
+    def __getitem__(self: Self, ticket_fp: Path) -> str:
+        return self._data[ticket_fp.name]
 
     def __setitem__(self: Self, ticket_fp: Path, ttc_id: str) -> None:
         self._data[ticket_fp.name] = ttc_id
