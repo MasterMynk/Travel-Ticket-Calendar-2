@@ -4,7 +4,7 @@ import sys
 import time
 from typing import Self
 
-from watchdog.events import DirCreatedEvent, FileCreatedEvent, PatternMatchingEventHandler
+from watchdog.events import DirCreatedEvent, DirDeletedEvent, FileCreatedEvent, FileDeletedEvent, PatternMatchingEventHandler
 
 from src.handlers.api.AiModelHandler import Model
 from src.classes.Configuration import Configuration
@@ -69,6 +69,16 @@ class TicketFolderHandler(PatternMatchingEventHandler):
                        f"{event.src_path} due to timeout", self.config)
                 log(LogLevel.Warning, self.config,
                     f"Timeout reached but file transfer not complete. Skipping ticket '{ticket_fp}'...")
+
+    def on_deleted(self: Self, event: DirDeletedEvent | FileDeletedEvent) -> None:
+        if not isinstance(event.src_path, str):
+            return
+
+        self._gsh.calendar.delete_event(
+            self._index[Path(event.src_path)], self._gsh.drive, self.config)
+
+        notify("Detected Ticket Deletion",
+               "Deleted PDF from Google Drive and event from Google Calendar", self.config)
 
     def _process_ticket(self: Self, ticket_fp: Path, gsh: GServicesHandler, model: Model, config: Configuration, to_notify: bool) -> str | None:
         log(LogLevel.Status, config, f"Processing {ticket_fp}")
