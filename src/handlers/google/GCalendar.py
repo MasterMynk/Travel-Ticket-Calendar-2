@@ -91,5 +91,5 @@ class GCalendar(GService):
             drive.trash(event["ticket_file_id"], config)
         self._perform_gapi_call(lambda: self._service.events().delete(
             calendarId=config.calendar_id, eventId=event["id"]).execute(), config)
-        print(f"DELETED EVENT WITH ID: {event["id"]}")
+        log(LogLevel.Status, config, f"Deleted event with id: {event["id"]}")
         return True

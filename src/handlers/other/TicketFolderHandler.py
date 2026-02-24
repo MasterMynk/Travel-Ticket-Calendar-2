@@ -40,7 +40,9 @@ class TicketFolderHandler(PatternMatchingEventHandler):
             ttc_id = self._process_ticket(ticket_fp, self._gsh,
                                           self._model, self.config, False)
             if ttc_id:
-                self._index[ticket_fp] = ttc_id
+                self._index.hold(ticket_fp, ttc_id)
+        self._index.for_missing(lambda ticket_name, ttc_id: self._delete_ticket(
+            self._gsh, ticket_name, ttc_id, self.config))
         self._index.flush()
 
     def on_created(self: Self, event: DirCreatedEvent | FileCreatedEvent) -> None:
@@ -63,7 +65,6 @@ class TicketFolderHandler(PatternMatchingEventHandler):
                                               self._model, self.config, True)
                 if ttc_id:
                     self._index[ticket_fp] = ttc_id
-                    self._index.flush()
             else:
                 notify("Skipping Ticket",
                        f"{event.src_path} due to timeout", self.config)
@@ -73,12 +74,9 @@ class TicketFolderHandler(PatternMatchingEventHandler):
     def on_deleted(self: Self, event: DirDeletedEvent | FileDeletedEvent) -> None:
         if not isinstance(event.src_path, str):
             return
-
-        self._gsh.calendar.delete_event(
-            self._index[Path(event.src_path)], self._gsh.drive, self.config)
-
-        notify("Detected Ticket Deletion",
-               "Deleted PDF from Google Drive and event from Google Calendar", self.config)
+        ticket_fp = Path(event.src_path)
+        self._delete_ticket(self._gsh, ticket_fp.name,
+                            self._index[ticket_fp], self.config)
 
     def _process_ticket(self: Self, ticket_fp: Path, gsh: GServicesHandler, model: Model, config: Configuration, to_notify: bool) -> str | None:
         log(LogLevel.Status, config, f"Processing {ticket_fp}")
@@ -133,6 +131,14 @@ class TicketFolderHandler(PatternMatchingEventHandler):
                 "Failure to perform some Google API call. Skipping ticket...")
             return None
         return ticket.ttc_id
+
+    @staticmethod
+    def _delete_ticket(gsh: GServicesHandler, ticket_name: str, ttc_id: str, config: Configuration) -> None:
+        gsh.calendar.delete_event(
+            ttc_id, gsh.drive, config)
+        log(LogLevel.Status, config, f"Deleted {ticket_name} -- {ttc_id}")
+        notify("Detected Ticket Deletion",
+               f"Deleted {ticket_name} from Google Drive and event from Google Calendar", config)
 
     @staticmethod
     def _mark_as_done(ticket_fp: Path, drive: GDrive, event: Event, config: Configuration) -> None:
