@@ -75,8 +75,12 @@ class TicketFolderHandler(PatternMatchingEventHandler):
         if not isinstance(event.src_path, str):
             return
         ticket_fp = Path(event.src_path)
-        self._delete_ticket(self._gsh, ticket_fp.name,
-                            self._index[ticket_fp], self.config)
+        if (ticket_fp in self._index):
+            self._delete_ticket(self._gsh, ticket_fp.name,
+                                self._index[ticket_fp], self.config)
+        else:
+            log(LogLevel.Status, self.config,
+                f"Deleted pdf: {ticket_fp} that wasn't in the index. Must not be a ticket.")
 
     def _process_ticket(self: Self, ticket_fp: Path, gsh: GServicesHandler, model: Model, config: Configuration, to_notify: bool) -> str | None:
         log(LogLevel.Status, config, f"Processing {ticket_fp}")

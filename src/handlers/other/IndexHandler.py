@@ -22,6 +22,9 @@ class IndexHandler:
         self._data[ticket_fp.name] = ttc_id
         self.flush()
 
+    def __contains__(self: Self, ticket_fp: Path) -> bool:
+        return ticket_fp.name in self._data
+
     def flush(self: Self) -> None:
         try:
             with open(self._output_path, "w") as output_file:

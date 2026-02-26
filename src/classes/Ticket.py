@@ -11,7 +11,7 @@ from src.classes.Configuration import Configuration
 from src.misc.Logger import LogLevel, log
 from src.handlers.api.RailRadarHandler import RailRadarHandler
 from src.classes.TravelData import TravelData, TravelDataField, TravelType
-from src.misc.common import CalendarEventColor
+from src.misc.common import CalendarEventColor, notify
 
 
 class Ticket:
@@ -143,6 +143,7 @@ CRITICAL REQUIREMENTS:
 3. Return ONLY valid JSON, no markdown formatting or code blocks
 4. The "description" field must be a string containing different pieces of on new lines
 5. If the ticket is for multiple passengers simply consider it being for the first passenger name that appears
+6. IF THE FILE IS NOT FOUND TO BE A TICKET SIMPLY RETURN THE LITERAL STRING "FALSE"
 
 REQUIRED FIELDS:
 {
@@ -172,6 +173,10 @@ EXTRACTION STRATEGY:
 3. Extract departure/arrival times - they're usually in 24-hour format
 """
         response = model.parse(ticket_fp, TICKET_EXTRACTION_PROMPT, config)
+
+        if response == "FALSE":
+            raise Exception(
+                f"{ticket_fp} doesn't seem to be a ticket of any kind.")
 
         if "```json" in response:
             response = response.split(
