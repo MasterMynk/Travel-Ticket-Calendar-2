@@ -90,7 +90,7 @@ class TicketFolderHandler(PatternMatchingEventHandler):
                 "Unimplemented feature of user intervention to supply correct info. Skipping ticket...")
             notify("Skipping Ticket",
                    f"Failure to parse {ticket_fp}", config)
-            return None
+            return
 
         try:
             if (event := gsh.calendar.event_exists(ticket.ttc_id, config)) is not None:

@@ -37,6 +37,8 @@ class IndexHandler:
             with open(self._output_path, "r") as output_file:
                 prev_data: dict[str, str] = json.loads(output_file.read())
                 for deleted_path in set(prev_data.keys()) - set(self._data.keys()):
+                    log(LogLevel.Status, self._config,
+                        f"{deleted_path} ticket is missing")
                     action(deleted_path, prev_data[deleted_path])
         except Exception as error:
             log(LogLevel.Warning, self._config,
