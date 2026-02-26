@@ -157,6 +157,8 @@ python ./main.py
 ```
 
 - The program then runs indefinitely unless terminated by pressing `Ctrl+C` or some other way
+- Monitors a folder (by default `home directory/travels/`) and creates a new event in Google Calendar upon addition of a new ticket pdf to the folder
+- Also deletes the event if the ticket is deleted from the folder when the program is or isn't running.
 
 - To configure the program a `config.toml` file can be provided which the program will look for upon startup in `~/.config/Travel Ticket Calendar/`
 

@@ -4,7 +4,7 @@ import sys
 import time
 from typing import Self
 
-from watchdog.events import DirCreatedEvent, FileCreatedEvent, PatternMatchingEventHandler
+from watchdog.events import DirCreatedEvent, DirDeletedEvent, FileCreatedEvent, FileDeletedEvent, PatternMatchingEventHandler
 
 from src.handlers.api.AiModelHandler import Model
 from src.classes.Configuration import Configuration
@@ -12,6 +12,7 @@ from src.handlers.other.ConfigurationHandler import ConfigurationHandler
 from src.handlers.google.GCalendar import Event
 from src.handlers.google.GDrive import GDrive
 from src.handlers.google.GServicesHandler import GServicesHandler
+from src.handlers.other.IndexHandler import IndexHandler
 from src.misc.Logger import LogLevel, log
 from src.classes.Ticket import Ticket
 from src.misc.common import notify
@@ -34,9 +35,15 @@ class TicketFolderHandler(PatternMatchingEventHandler):
 
         self._model = Model()
 
+        self._index = IndexHandler(self.config)
         for ticket_fp in self.config.ticket_folder.glob("*.pdf"):
-            self._process_ticket(ticket_fp, self._gsh,
-                                 self._model, self.config, False)
+            ttc_id = self._process_ticket(ticket_fp, self._gsh,
+                                          self._model, self.config, False)
+            if ttc_id:
+                self._index.hold(ticket_fp, ttc_id)
+        self._index.for_missing(lambda ticket_name, ttc_id: self._delete_ticket(
+            self._gsh, ticket_name, ttc_id, self.config))
+        self._index.flush()
 
     def on_created(self: Self, event: DirCreatedEvent | FileCreatedEvent) -> None:
         if isinstance(event.src_path, str):
@@ -54,15 +61,24 @@ class TicketFolderHandler(PatternMatchingEventHandler):
                 notify("Detected New Ticket",
                        f"Processing {event.src_path}", self.config)
 
-                self._process_ticket(ticket_fp, self._gsh,
-                                     self._model, self.config, True)
+                ttc_id = self._process_ticket(ticket_fp, self._gsh,
+                                              self._model, self.config, True)
+                if ttc_id:
+                    self._index[ticket_fp] = ttc_id
             else:
                 notify("Skipping Ticket",
                        f"{event.src_path} due to timeout", self.config)
                 log(LogLevel.Warning, self.config,
                     f"Timeout reached but file transfer not complete. Skipping ticket '{ticket_fp}'...")
 
-    def _process_ticket(self: Self, ticket_fp: Path, gsh: GServicesHandler, model: Model, config: Configuration, to_notify: bool) -> None:
+    def on_deleted(self: Self, event: DirDeletedEvent | FileDeletedEvent) -> None:
+        if not isinstance(event.src_path, str):
+            return
+        ticket_fp = Path(event.src_path)
+        self._delete_ticket(self._gsh, ticket_fp.name,
+                            self._index[ticket_fp], self.config)
+
+    def _process_ticket(self: Self, ticket_fp: Path, gsh: GServicesHandler, model: Model, config: Configuration, to_notify: bool) -> str | None:
         log(LogLevel.Status, config, f"Processing {ticket_fp}")
 
         try:
@@ -113,6 +129,16 @@ class TicketFolderHandler(PatternMatchingEventHandler):
         except Exception as error:
             log(LogLevel.Error, config,
                 "Failure to perform some Google API call. Skipping ticket...")
+            return None
+        return ticket.ttc_id
+
+    @staticmethod
+    def _delete_ticket(gsh: GServicesHandler, ticket_name: str, ttc_id: str, config: Configuration) -> None:
+        gsh.calendar.delete_event(
+            ttc_id, gsh.drive, config)
+        log(LogLevel.Status, config, f"Deleted {ticket_name} -- {ttc_id}")
+        notify("Detected Ticket Deletion",
+               f"Deleted {ticket_name} from Google Drive and event from Google Calendar", config)
 
     @staticmethod
     def _mark_as_done(ticket_fp: Path, drive: GDrive, event: Event, config: Configuration) -> None:
