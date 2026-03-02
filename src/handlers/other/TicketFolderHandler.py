@@ -36,16 +36,16 @@ class TicketFolderHandler(PatternMatchingEventHandler):
         self._model = Model()
 
         self._index = IndexHandler(self.config)
-        done_journeys: list[str] = []
+        done_journeys: list[Path] = []
         for ticket_fp in self.config.ticket_folder.glob("*.pdf"):
             ret_val = self._process_ticket(ticket_fp, self._gsh,
                                            self._model, self.config, False)
             if ret_val:
                 if ret_val[1]:
-                    done_journeys.append(ticket_fp.name)
+                    done_journeys.append(ticket_fp)
                 self._index.hold(ticket_fp, ret_val[0])
         self._index.for_missing(lambda ticket_name, ttc_id: self._delete_ticket(
-            self._gsh, ticket_name, ttc_id, self.config))
+            self._gsh, ticket_name, ttc_id, self._index, self.config))
         for done_journey in done_journeys:
             self._index.pop(done_journey)
 
@@ -83,7 +83,7 @@ class TicketFolderHandler(PatternMatchingEventHandler):
         ticket_fp = Path(event.src_path)
         if (ticket_fp in self._index):
             self._delete_ticket(self._gsh, ticket_fp.name,
-                                self._index[ticket_fp], self.config)
+                                self._index[ticket_fp], self._index, self.config)
         else:
             log(LogLevel.Status, self.config,
                 f"Deleted pdf: {ticket_fp} that wasn't in the index. Must not be a ticket.")
@@ -108,7 +108,8 @@ class TicketFolderHandler(PatternMatchingEventHandler):
                     f"\tFound the event at {event["link"]}. Not creating it again")
 
                 if datetime.now() > ticket.arrival:
-                    self._mark_as_done(ticket_fp, gsh.drive, event, config)
+                    self._mark_as_done(ticket_fp, gsh.drive,
+                                       event, self._index, config)
                     notify("Journey marked as Done!",
                            f"Hope your journey from {ticket.from_where} to {ticket.to_where} was successful :)", config)
                     return ticket.ttc_id, True
@@ -144,15 +145,16 @@ class TicketFolderHandler(PatternMatchingEventHandler):
         return ticket.ttc_id, False
 
     @staticmethod
-    def _delete_ticket(gsh: GServicesHandler, ticket_name: str, ttc_id: str, config: Configuration) -> None:
+    def _delete_ticket(gsh: GServicesHandler, ticket_name: str, ttc_id: str, index: IndexHandler, config: Configuration) -> None:
         gsh.calendar.delete_event(
             ttc_id, gsh.drive, config)
+        index.pop(Path(ticket_name))
         log(LogLevel.Status, config, f"Deleted {ticket_name} -- {ttc_id}")
         notify("Detected Ticket Deletion",
                f"Deleted {ticket_name} from Google Drive and event from Google Calendar", config)
 
     @staticmethod
-    def _mark_as_done(ticket_fp: Path, drive: GDrive, event: Event, config: Configuration) -> None:
+    def _mark_as_done(ticket_fp: Path, drive: GDrive, event: Event, index: IndexHandler, config: Configuration) -> None:
         try:
             if event["ticket_file_id"] is not None:
                 drive.trash(event["ticket_file_id"], config)

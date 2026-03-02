@@ -11,7 +11,6 @@ class IndexHandler:
         self._data: dict[str, str] = {}
         self._config = config
         self._output_path = self._config.cache_folder / "index.json"
-        self.pop = self._data.pop
 
     def __getitem__(self: Self, ticket_fp: Path) -> str:
         return self._data[ticket_fp.name]
@@ -25,6 +24,11 @@ class IndexHandler:
 
     def __contains__(self: Self, ticket_fp: Path) -> bool:
         return ticket_fp.name in self._data
+
+    def pop(self: Self, ticket_fp: Path) -> str:
+        to_ret = self._data.pop(ticket_fp.name, "")
+        self.flush()
+        return to_ret
 
     def flush(self: Self) -> None:
         try:
