@@ -36,13 +36,19 @@ class TicketFolderHandler(PatternMatchingEventHandler):
         self._model = Model()
 
         self._index = IndexHandler(self.config)
+        done_journeys: list[str] = []
         for ticket_fp in self.config.ticket_folder.glob("*.pdf"):
-            ttc_id = self._process_ticket(ticket_fp, self._gsh,
-                                          self._model, self.config, False)
-            if ttc_id:
-                self._index.hold(ticket_fp, ttc_id)
+            ret_val = self._process_ticket(ticket_fp, self._gsh,
+                                           self._model, self.config, False)
+            if ret_val:
+                if ret_val[1]:
+                    done_journeys.append(ticket_fp.name)
+                self._index.hold(ticket_fp, ret_val[0])
         self._index.for_missing(lambda ticket_name, ttc_id: self._delete_ticket(
             self._gsh, ticket_name, ttc_id, self.config))
+        for done_journey in done_journeys:
+            self._index.pop(done_journey)
+
         self._index.flush()
 
     def on_created(self: Self, event: DirCreatedEvent | FileCreatedEvent) -> None:
@@ -61,10 +67,10 @@ class TicketFolderHandler(PatternMatchingEventHandler):
                 notify("Detected New Ticket",
                        f"Processing {event.src_path}", self.config)
 
-                ttc_id = self._process_ticket(ticket_fp, self._gsh,
-                                              self._model, self.config, True)
-                if ttc_id:
-                    self._index[ticket_fp] = ttc_id
+                ret_val = self._process_ticket(ticket_fp, self._gsh,
+                                               self._model, self.config, True)
+                if ret_val:
+                    self._index[ticket_fp] = ret_val[0]
             else:
                 notify("Skipping Ticket",
                        f"{event.src_path} due to timeout", self.config)
@@ -82,7 +88,7 @@ class TicketFolderHandler(PatternMatchingEventHandler):
             log(LogLevel.Status, self.config,
                 f"Deleted pdf: {ticket_fp} that wasn't in the index. Must not be a ticket.")
 
-    def _process_ticket(self: Self, ticket_fp: Path, gsh: GServicesHandler, model: Model, config: Configuration, to_notify: bool) -> str | None:
+    def _process_ticket(self: Self, ticket_fp: Path, gsh: GServicesHandler, model: Model, config: Configuration, to_notify: bool) -> tuple[str, bool] | None:
         log(LogLevel.Status, config, f"Processing {ticket_fp}")
 
         try:
@@ -105,6 +111,7 @@ class TicketFolderHandler(PatternMatchingEventHandler):
                     self._mark_as_done(ticket_fp, gsh.drive, event, config)
                     notify("Journey marked as Done!",
                            f"Hope your journey from {ticket.from_where} to {ticket.to_where} was successful :)", config)
+                    return ticket.ttc_id, True
 
                 elif to_notify:
                     notify("Event Already Present",
@@ -134,7 +141,7 @@ class TicketFolderHandler(PatternMatchingEventHandler):
             log(LogLevel.Error, config,
                 "Failure to perform some Google API call. Skipping ticket...")
             return None
-        return ticket.ttc_id
+        return ticket.ttc_id, False
 
     @staticmethod
     def _delete_ticket(gsh: GServicesHandler, ticket_name: str, ttc_id: str, config: Configuration) -> None:

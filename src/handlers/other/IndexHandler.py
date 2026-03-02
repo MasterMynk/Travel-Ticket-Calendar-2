@@ -11,6 +11,7 @@ class IndexHandler:
         self._data: dict[str, str] = {}
         self._config = config
         self._output_path = self._config.cache_folder / "index.json"
+        self.pop = self._data.pop
 
     def __getitem__(self: Self, ticket_fp: Path) -> str:
         return self._data[ticket_fp.name]
