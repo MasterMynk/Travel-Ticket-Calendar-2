@@ -79,11 +79,11 @@ class RailRadarHandler:
                     # Returning a list containing dictionaries representing all the stations the train stops at with only the required fields to save data
                     return [
                         {
-                            "day": station["day"],
+                            "day": station.get("departureDay", station.get("arrivalDay", 1)),
                             "departure": station.get("scheduledDeparture", 0),
                             "arrival": station.get("scheduledArrival", 0),
-                            "code": station["stationCode"],
-                            "name": station["stationName"],
+                            "code": station["station"]["code"],
+                            "name": station["station"]["name"],
                         }
                         for station in self._api_call(self.train_number, json.loads(credentials_json.read()), config)["data"]["route"]
                         if station["isHalt"] == 1
