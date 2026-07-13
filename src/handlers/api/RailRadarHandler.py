@@ -114,7 +114,7 @@ class RailRadarHandler:
         log(LogLevel.Status, config, f"\t\tPerforming API call to RailRadar")
 
         response = requests.get(
-            f"https://api.railradar.in/api/v1/trains/{train_number}",
+            f"https://api.railradar.in/v1/trains/{train_number}",
             headers=header
         )
         response.raise_for_status()

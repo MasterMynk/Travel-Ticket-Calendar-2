@@ -144,7 +144,7 @@ pip install -r requirements.txt
 4. Create a file called `credentials/rail_radar_credentials.json` in `Travel-Ticket-Calendar-2` folder and paste the key in there in this format
 
 ```json
-{ "X-API-Key": "rr_fc7daqttoc3sjmcfag8xveeq6yo8aqpj" }
+{ "Authorization": "Bearer rg_ef46c8d8d0ee4ff4acc7d9cd96510251" }
 ```
 
 # Usage & Configuration
